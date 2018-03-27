@@ -1,0 +1,67 @@
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 6b4e2531c8406510f2ce853eed5c912ca4b97eab177f1096d59a449cd5b431e7
+
+name:           LamE
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/zyxw121/LamE#readme>
+homepage:       https://github.com/zyxw121/LamE#readme
+bug-reports:    https://github.com/zyxw121/LamE/issues
+author:         Daniel Mroz
+maintainer:     daniel.mroz@univ.ox.ac.uk
+copyright:      2018 Daniel Mroz
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/zyxw121/LamE
+
+library
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , parsec
+  exposed-modules:
+      LamE, LamParse, Lam
+  other-modules:
+      Environment
+      Lib
+      Paths_LamE
+  default-language: Haskell2010
+
+executable LamE
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      LamE
+    , base >=4.7 && <5
+    , parsec
+  other-modules:
+      Paths_LamE
+  default-language: Haskell2010
+
+test-suite LamE-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      LamE
+    , base >=4.7 && <5
+    , parsec
+  other-modules:
+      Paths_LamE
+  default-language: Haskell2010
