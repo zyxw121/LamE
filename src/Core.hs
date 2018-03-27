@@ -80,3 +80,41 @@ instance Show Term where
 instance Show DBTerm where
   show = pp 0 . fromDB
 
+
+-- Reduction
+--shift' n m t increments all vars in t that are > than m by n
+shift' :: Integer -> Integer -> DBTerm -> DBTerm
+shift' n m (DBVar k) = if k >= m then (DBVar $ n+k) else (DBVar k)
+shift' n m (DBApp u v) = DBApp (shift' n m u) (shift' n m v)
+shift' n m (DBAbs s) = DBAbs (shift' n (m+1) s)
+
+--shift n incs free vars by n
+shift :: Integer -> DBTerm -> DBTerm
+shift n = shift' n 0
+
+dbSub :: DBTerm -> Integer -> DBTerm -> DBTerm
+dbSub t n (DBVar m) = if n==m then t else (DBVar m)
+dbSub t n (DBApp u v) = DBApp (dbSub t n u) (dbSub t n v)
+dbSub t n (DBAbs s) = DBAbs (dbSub (shift 1 t) (n+1) s ) 
+
+dbBetaRed :: DBTerm -> Maybe DBTerm
+dbBetaRed (DBApp (DBAbs s) t) = Just $ shift (-1) (dbSub (shift 1 t) 0 s ) 
+dbBetaRed _ = Nothing
+
+dbLeftRed :: DBTerm -> Maybe DBTerm
+dbLeftRed (DBVar x) = Nothing
+dbLeftRed u@(DBApp s t) = dbBetaRed u 
+  <|> do
+    x <- dbLeftRed s
+    return $ DBApp x t
+  <|> do 
+    x <- dbLeftRed t 
+    return $ DBApp s x
+lred (DBAbs s) = dbLeftRed s >>= return . DBAbs
+
+dbBetaNormal :: DBTerm -> DBTerm
+dbBetaNormal t = case dbLeftRed t of
+  Nothing -> t
+  Just t' -> dbBetaNormal t'
+
+
