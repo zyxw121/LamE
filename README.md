@@ -2,7 +2,7 @@
 The LAMbda Evaluater (LamE) compiles a small Scheme-like functional langauge to the lambda calculus. 
 
 
-#Usage
+# Usage
 Build with [Stack](https://docs.haskellstack.org/en/stable/README/).
 
 ```
