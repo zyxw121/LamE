@@ -23,7 +23,7 @@ dependencies:
 
 library:
   source-dirs: src
-  exposed-modules: LamE, LamParse, Lam
+  exposed-modules: Core
   other-modules:
   dependencies:
   - parsec 
