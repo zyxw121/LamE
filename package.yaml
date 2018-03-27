@@ -23,7 +23,10 @@ dependencies:
 
 library:
   source-dirs: src
-  exposed-modules: Core
+  exposed-modules: 
+  - Core 
+  - Syntax
+  - Parser
   other-modules:
   dependencies:
   - parsec 
