@@ -117,4 +117,88 @@ dbBetaNormal t = case dbLeftRed t of
   Nothing -> t
   Just t' -> dbBetaNormal t'
 
+-- Some DB terms
+
+i       = DBAbs (DBVar 0)
+k       = DBAbs (DBAbs (DBVar 1))
+s       = DBAbs (DBAbs (DBAbs (DBApp
+            (DBApp (DBVar 2)(DBVar 0))
+            (DBApp (DBVar 1)(DBVar 0))) )) 
+b       = DBAbs (DBVar 2)
+true    = DBAbs (DBAbs (DBVar 1))
+false   = DBAbs (DBAbs (DBVar 0))
+
+
+y = DBAbs (DBApp g g) 
+  where g = DBAbs $ DBApp (DBVar 1) (DBApp (DBVar 0) (DBVar 0))
+
+w = DBAbs (DBApp (DBVar 0) (DBVar 0))
+omega = DBApp w w
+
+theta = DBApp x x where
+  x =  DBAbs (DBAbs (DBApp  (DBVar 0) (DBApp (DBApp (DBVar 1) (DBVar 1)) (DBVar 0))))
+
+zero    = DBAbs (DBAbs (DBVar 0))
+
+church :: Integer -> DBTerm
+church 0 = zero
+church n = DBAbs (DBAbs (DBApp 
+  (DBVar 1)
+  (DBApp 
+    (DBApp (church (n-1)) (DBVar 1)) 
+    (DBVar 0))))
+
+succ'   = DBAbs (DBAbs (DBAbs (DBApp 
+            (DBVar 1) 
+            (DBApp 
+              (DBApp (DBVar 2) (DBVar 1)) 
+              (DBVar 0)) ))) 
+
+iszero  = DBAbs (DBApp 
+          (DBApp 
+            (DBVar 0) 
+            (DBAbs false))
+          (true))
+
+pred' = DBAbs (DBApp 
+  (DBApp 
+    (DBApp iszero (DBVar 0))
+    (zero)) 
+  (DBApp 
+    (DBApp 
+      (DBVar 0) 
+      (DBAbs (DBApp 
+        (DBApp (DBVar 0) (i)) 
+        (DBApp (succ') (DBVar 0))))) 
+    (DBAbs (DBAbs zero)))) 
+
+rcase = DBAbs (DBAbs (DBAbs (DBApp 
+  (DBApp
+    (DBApp iszero (DBVar 2))
+    (DBVar 1)) 
+  (DBApp 
+    (DBVar 0) 
+    (DBApp pred' (DBVar 2)))) ))
+
+equals = DBApp y (DBAbs (DBAbs (DBAbs (DBApp 
+  (DBApp (DBApp iszero (DBVar 1)) (DBApp iszero (DBVar 0))) 
+  (DBApp 
+    (DBApp (DBApp iszero (DBVar 0)) (false)) 
+    (DBApp (DBApp (DBVar 2) (DBApp pred' (DBVar 1))) (DBApp pred' (DBVar 0)))) ))))
+
+add = DBAbs (DBAbs (DBAbs (DBAbs (DBApp 
+  (DBApp (DBVar 3) (DBVar 1))
+  (DBApp 
+    (DBApp (DBVar 2) (DBVar 1)) 
+    (DBVar 0))) )))
+
+geq = DBApp y (DBAbs (DBAbs (DBAbs (DBApp 
+  (DBApp 
+    (DBApp rcase (DBVar 1)) 
+    (DBApp iszero (DBVar 0))) 
+  (DBAbs (DBApp 
+    (DBApp (DBVar 3) (DBVar 0)) 
+    (DBApp pred' (DBVar 1)))))))) 
+
+
 
