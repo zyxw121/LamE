@@ -29,12 +29,10 @@ allowed :: String -> Bool
 allowed [] = False
 allowed s = all allowed' s 
 
-
 pos :: Char -> Int
 pos c = index' c alloweds where
   index' _ [] = error "no index\'"
   index' a (x:xs) = if x==a then 1 else 1 + (index' a xs) 
-
 
 makes :: Int -> [Name]
 makes 0 =[Name "a"]

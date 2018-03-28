@@ -3,16 +3,29 @@ import Core
 
 type Ident = String
 
-data Expr a = VarExp a
+data Expr  = VarExp Name 
             | NumExp Integer
-            | If (Expr a) (Expr a) (Expr a)
-            | Func [Ident] (Expr a)
-            | Apply (Expr a) [Expr a]
-            | Let (Defn a) (Expr a) 
+            | If Expr Expr Expr
+            | Func [Name] Expr
+            | Apply Expr [Expr]
+            | Let Defn Expr 
             deriving (Show)
 
-data Defn a = Val a (Expr a) 
-            | Rec a (Expr a)
+data Defn  = Val Name Expr 
+            | Rec Name Expr
             deriving (Show) 
          
-data Program a = Program [Defn a] (Expr a) deriving (Show)
+data Program  = Program [Defn] Expr deriving (Show)
+
+data Action = Param Name 
+            | NumAct Integer 
+            | BoolAct Bool 
+            | Closure [Name] Expr Env 
+            | DefRec Name Expr Env 
+            | Application Action [Action] 
+            | Primitive Prim 
+            deriving (Show)
+
+type Env = () 
+type Prim = ()
+

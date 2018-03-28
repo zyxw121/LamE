@@ -27,6 +27,7 @@ library:
   - Core 
   - Syntax
   - Parser
+  - LamE
   other-modules:
   dependencies:
   - parsec 
