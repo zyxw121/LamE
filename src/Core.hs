@@ -2,17 +2,55 @@
 module Core where
 import Control.Applicative
 
-data Name = Name {name :: Char, num :: Int }  deriving (Eq)
+--data Name = Name {name :: Char, num :: Int }  deriving (Eq)
 data Term = Var Name | Abs Name Term | App Term Term
 
 data DBTerm = DBVar Integer | DBAbs DBTerm | DBApp DBTerm DBTerm
 
 -- 0 <-> a_0, 1 <-> b_0, ... etc
-instance Enum Name where 
-  fromEnum (Name{..}) = ((fromEnum (name::Char))-96) + 26*num
-  toEnum n = Name {
-    name= toEnum (((n-1)`mod`26) +97), 
-    num=n `div` 26}
+--instance Enum Name where 
+--  fromEnum (Name{..}) = ((fromEnum (name::Char))-96) + 26*num
+--  toEnum n = Name {
+--    name= toEnum (((n-1)`mod`26) +97), 
+--    num=n `div` 26}
+
+newtype Name = Name String deriving (Eq)
+
+instance Show Name where
+  show (Name s) = s
+
+alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>="
+
+prims = words "== + - * / < > <= >= pred succ and or not"
+
+allowed' c = c `elem` alloweds
+
+allowed :: String -> Bool
+allowed [] = False
+allowed s = all allowed' s 
+
+
+pos :: Char -> Int
+pos c = index' c alloweds where
+  index' _ [] = error "no index\'"
+  index' a (x:xs) = if x==a then 1 else 1 + (index' a xs) 
+
+
+makes :: Int -> [Name]
+makes 0 =[Name "a"]
+makes 1 = map (Name . (:[])) alloweds
+makes n = let ns = makes (n-1) in [Name (s:ss) | s <- alloweds, (Name ss) <- ns  ]
+
+news :: [Name] -> Name
+news ns =
+  let n = length ns
+      k = length $ takeWhile (<=n) $ iterate (*70) 1 
+      ps = take (n+1) $ makes k  in 
+        head [q | q<- ps, not $ q `elem` ns] 
+          
+        
+         
+        
 
 
 --Conversions between term types
@@ -33,12 +71,11 @@ toDB' (Abs x s) ns = DBAbs (toDB' s (x:ns))
 toDB :: Term -> DBTerm
 toDB t = toDB' t (frees t) 
 
-
-smallest :: [Int] -> Int
-smallest xs = foldr min (length xs+1) [x| x<- [1..length xs +1], not $x `elem` xs ]
+--smallest :: [Int] -> Int
+--smallest xs = foldr min (length xs+1) [x| x<- [1..length xs +1], not $x `elem` xs ]
 
 fresh :: [(a,Name)] -> Name
-fresh es = let (as,names) = unzip es in toEnum . smallest . map fromEnum $ names 
+fresh es = let (as,names) = unzip es in news names
 
 find' :: (Eq a) => [(a,Name)] -> a -> Name
 find' es n = let matches = filter (\(x,s) -> x==n) es in case matches of
@@ -54,8 +91,8 @@ fromDB :: DBTerm -> Term
 fromDB t = fromDB' [] t
 
 --Pretty printing
-instance Show Name where
-  show (Name{..}) = if num>0 then [name]++"_"++(show num) else [name] 
+--instance Show Name where
+--  show (Name{..}) = if num>0 then [name]++"_"++(show num) else [name] 
 
 addParens :: Int -> String -> String
 addParens 0 s = s

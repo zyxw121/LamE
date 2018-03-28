@@ -32,20 +32,20 @@ white = do
   s <- many1 space
   return ()
 
-pExpr :: Parser Expr
+pExpr :: Parser (Expr String)
 pExpr = pVar
       <|> pNum 
       <|> pIf 
       <|> try (parens (pFunc <|> pApply <|> pLet)) 
       <|> parens pExpr
 
-pNum :: Parser Expr
+pNum :: Parser (Expr String)
 pNum = integer >>= return . NumExp
 
-pVar :: Parser Expr
+pVar :: Parser (Expr String)
 pVar = identifier >>= return . VarExp
 
-pIf :: Parser Expr
+pIf :: Parser (Expr String)
 pIf = do
   reserved "if"
   cond <- pExpr
@@ -55,20 +55,20 @@ pIf = do
   right <- pExpr
   return $ If cond left right
 
-pFunc :: Parser Expr
+pFunc :: Parser (Expr String)
 pFunc = do
   reserved "func"
   xs <- parens $ sepBy1 identifier white
   body <- parens $ pExpr
   return $ Func xs body
 
-pApply :: Parser Expr
+pApply :: Parser (Expr String)
 pApply = do
   f <- pExpr
   args <- sepBy1 pExpr whiteSpace
   return $ Apply f args
 
-pLet :: Parser Expr
+pLet :: Parser (Expr String)
 pLet = do
   reserved "let"
   def <- pDefn
@@ -76,10 +76,10 @@ pLet = do
   e <- pExpr
   return $ Let def e
 
-pDefn :: Parser Defn
+pDefn :: Parser (Defn String)
 pDefn = pVal <|> pRec
 
-pVal :: Parser Defn
+pVal :: Parser (Defn String)
 pVal = do
   reserved "val"
   x <- identifier
@@ -87,7 +87,7 @@ pVal = do
   e <- pExpr
   return $ Val x e
 
-pRec :: Parser Defn
+pRec :: Parser (Defn String)
 pRec = do
   reserved "rec"
   x <- identifier
@@ -95,8 +95,9 @@ pRec = do
   e <- pExpr
   return $ Rec x e
 
-pProgram :: Parser Program
+pProgram :: Parser (Program String)
 pProgram = do
   defs <- many (pDefn >>= (\x -> semi >> return x)) --list of ';' seperated defns
   e <- pExpr
   return $ Program defs e
+
