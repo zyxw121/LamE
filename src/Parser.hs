@@ -36,10 +36,15 @@ white = do
 
 pExpr :: Parser (Expr )
 pExpr = pVar
+      <|> pBool
       <|> pNum 
       <|> pIf 
       <|> try (parens (pFunc <|> pApply <|> pLet)) 
       <|> parens pExpr
+
+pBool :: Parser Expr
+pBool = (reserved "true" >> return (BoolExp True))
+      <|> (reserved "false" >> return (BoolExp False))
 
 pNum :: Parser (Expr )
 pNum = integer >>= return . NumExp
