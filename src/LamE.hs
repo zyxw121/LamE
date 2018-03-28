@@ -1,7 +1,10 @@
 module LamE where
+import Prelude hiding (pred, succ, and, or)
 import Core
 import Syntax
 
+
+--Env -> Action
 act :: Expr -> Env -> Action
 act (VarExp n) env = case find env n of
   Just v -> v
@@ -34,6 +37,8 @@ elab (Rec x e) env = define env x (DefRec x e env)
 act' :: Program -> Env -> Action
 act' (Program ds e) env = act e (foldr elab env  ds)
 
+--Action -> Term, in several steps
+
 partial :: Action -> Partial Combinator 
 partial (NumAct n) = Hole (CInt n)
 partial (BoolAct a) = Hole (CBool a)
@@ -49,28 +54,28 @@ term' f (PApp s t) = App (term' f s) (term' f t)
 term' f (PAbs x s) = Abs x (term' f s)
 term' f (Hole x) = f x
 
-termP :: Prim -> DBTerm
-termP Plus = add
---termP Minus =  
---termP Times = 
---termP Divide =
-termP Pred = pred'
-termP Succ = succ'
---termP And = 
---termP Or = 
---termP Not = 
-termP Equal = equals
---termP Lesser =
---termP Leq = 
-termP Geq = geq
---termP Greater =
+termP :: Prim -> Term
+termP Plus = addInt
+termP Minus = minusInt 
+termP Times = timesInt
+--termP Divide = divideInt
+--termP Pred = predInt
+--termP Succ = succInt
+termP And = and
+termP Or = or
+termP Not = neg
+termP Equal = equalInt
+termP Lesser = lesserInt
+termP Leq = leqInt
+termP Geq = geqInt
+termP Greater = greaterInt
 
-termC :: Combinator -> DBTerm
+termC :: Combinator -> Term
 termC (CPrim p) = termP p
-termC (CInt n) = church n 
+termC (CInt n) = churchInt n 
 termC (CBool True) = true
 termC (CBool False) = false
 termC (Y) = y
 
 term :: (Partial Combinator) -> Term
-term = term' (fromDB . termC)
+term = term' termC

@@ -47,7 +47,7 @@ pBool = (reserved "true" >> return (BoolExp True))
       <|> (reserved "false" >> return (BoolExp False))
 
 pNum :: Parser (Expr )
-pNum = integer >>= return . NumExp
+pNum = integer >>= return . NumExp . fromIntegral
 
 pVar :: Parser (Expr )
 pVar = identifier >>= return . VarExp

@@ -5,7 +5,7 @@ type Ident = String
 
 data Expr  = VarExp Name
             | BoolExp Bool 
-            | NumExp Integer
+            | NumExp Int
             | If Expr Expr Expr
             | Func [Name] Expr
             | Apply Expr [Expr]
@@ -19,7 +19,7 @@ data Defn  = Val Name Expr
 data Program  = Program [Defn] Expr deriving (Show)
 
 data Action = Param Name 
-            | NumAct Integer 
+            | NumAct Int 
             | BoolAct Bool 
             | Closure [Name] Expr Env 
             | DefRec Name Expr Env 
@@ -32,7 +32,7 @@ data Prim = Plus | Minus | Times | Divide | Pred | Succ
           | Equal | Lesser | Leq | Geq | Greater
           deriving (Show) 
 
-data Combinator = CPrim Prim | CInt Integer | CBool Bool | Y
+data Combinator = CPrim Prim | CInt Int | CBool Bool | Y
 
 data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a
 

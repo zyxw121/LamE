@@ -1,11 +1,12 @@
 {-# LANGUAGE  RecordWildCards #-}
 module Core where
 import Control.Applicative
+import Prelude hiding (and, or, abs, pred, succ, fst, snd)
 
 --data Name = Name {name :: Char, num :: Int }  deriving (Eq)
 data Term = Var Name | Abs Name Term | App Term Term
 
-data DBTerm = DBVar Integer | DBAbs DBTerm | DBApp DBTerm DBTerm
+data DBTerm = DBVar Int | DBAbs DBTerm | DBApp DBTerm DBTerm
 
 -- 0 <-> a_0, 1 <-> b_0, ... etc
 --instance Enum Name where 
@@ -46,9 +47,6 @@ news ns =
       ps = take (n+1) $ makes k  in 
         head [q | q<- ps, not $ q `elem` ns] 
           
-        
-         
-        
 
 
 --Conversions between term types
@@ -57,7 +55,7 @@ frees (Var n) = [n]
 frees (App s t) = frees s ++ frees t
 frees (Abs x s) = filter (/=x) $ frees s
 
-index :: (Eq a) => [a] -> a -> Integer
+index :: (Eq a) => [a] -> a -> Int
 index [] a = error "no index"
 index (x:xs) a = if x==a then 0 else 1+(index xs a)
 
@@ -80,7 +78,7 @@ find' es n = let matches = filter (\(x,s) -> x==n) es in case matches of
   [] -> fresh es 
   ((x,s):xs) -> s
 
-fromDB' :: [(Integer, Name)] -> DBTerm -> Term
+fromDB' :: [(Int, Name)] -> DBTerm -> Term
 fromDB' es (DBVar n) = Var (find' es n)
 fromDB' es (DBApp s t) = App (fromDB' es s) (fromDB' es t)
 fromDB' es (DBAbs s) = let x = fresh es in Abs x (fromDB' ((0,x):(map (\(a,b) -> (a+1,b)) es)) s)
@@ -118,69 +116,180 @@ instance Show DBTerm where
 
 -- Reduction
 --shift' n m t increments all vars in t that are > than m by n
-shift' :: Integer -> Integer -> DBTerm -> DBTerm
+shift' :: Int -> Int -> DBTerm -> DBTerm
 shift' n m (DBVar k) = if k >= m then (DBVar $ n+k) else (DBVar k)
 shift' n m (DBApp u v) = DBApp (shift' n m u) (shift' n m v)
 shift' n m (DBAbs s) = DBAbs (shift' n (m+1) s)
 
 --shift n incs free vars by n
-shift :: Integer -> DBTerm -> DBTerm
+shift :: Int -> DBTerm -> DBTerm
 shift n = shift' n 0
 
-dbSub :: DBTerm -> Integer -> DBTerm -> DBTerm
-dbSub t n (DBVar m) = if n==m then t else (DBVar m)
-dbSub t n (DBApp u v) = DBApp (dbSub t n u) (dbSub t n v)
-dbSub t n (DBAbs s) = DBAbs (dbSub (shift 1 t) (n+1) s ) 
+sub' :: DBTerm -> Int -> DBTerm -> DBTerm
+sub' t n (DBVar m) = if n==m then t else (DBVar m)
+sub' t n (DBApp u v) = DBApp (sub' t n u) (sub' t n v)
+sub' t n (DBAbs s) = DBAbs (sub' (shift 1 t) (n+1) s ) 
 
-dbBetaRed :: DBTerm -> Maybe DBTerm
-dbBetaRed (DBApp (DBAbs s) t) = Just $ shift (-1) (dbSub (shift 1 t) 0 s ) 
-dbBetaRed _ = Nothing
+bred' :: DBTerm -> Maybe DBTerm
+bred' (DBApp (DBAbs s) t) = Just $ shift (-1) (sub' (shift 1 t) 0 s ) 
+bred' _ = Nothing
 
-dbLeftRed :: DBTerm -> Maybe DBTerm
-dbLeftRed (DBVar x) = Nothing
-dbLeftRed u@(DBApp s t) = dbBetaRed u 
+lred' :: DBTerm -> Maybe DBTerm
+lred' (DBVar x) = Nothing
+lred' u@(DBApp s t) = bred' u 
   <|> do
-    x <- dbLeftRed s
+    x <- lred' s
     return $ DBApp x t
   <|> do 
-    x <- dbLeftRed t 
+    x <- lred' t 
     return $ DBApp s x
-lred (DBAbs s) = dbLeftRed s >>= return . DBAbs
+lred' (DBAbs s) = lred' s >>= return . DBAbs
 
-dbBetaNormal :: DBTerm -> DBTerm
-dbBetaNormal t = case dbLeftRed t of
+bnf' :: DBTerm -> DBTerm
+bnf' t = case lred' t of
   Nothing -> t
-  Just t' -> dbBetaNormal t'
+  Just t' -> bnf' t'
+
+--Some terms
+abs = Abs . Name
+v= Var . Name
+
+abss :: String -> Term -> Term
+abss [x] t = abs (x:[]) t
+abss (x:y:xs) t = abs (x:[]) $ abss (y:xs) t 
+
+i = abs "x" (v"x")
+s = abss "abc" (App (App (v "a") (v "c")) (App (v "b") (v "c")))
+k = abss "xy" (v "y")
+
+
+
+y = abs "f" (App x x)
+  where x = abs "x" (App (v "f") (App (v"x") (v"x"))) 
+
+true = abs "a" (abs "b" $ v"a" )
+false = abs "a" (abs "b" $ v"b" )
+
+and = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
+_and a b = App (App and a) b
+or = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
+neg = abss "xab" (App (App (v "x") (v"b"))(v"a"))
+_neg a = App neg a 
+
+zeroNat = abss "fx" (v "x")
+
+churchNat :: Int -> Term
+churchNat n = if n < 0 then error "nats can't be negative..." else  abss "fx" $ foldr (App) (v "x") (take n $ repeat (v"f"))
+
+addNat :: Term
+addNat = abss "mnfx" (App (App (v"m") (v "f")) (App (App (v "n") (v "f")) (v "x"))) 
+
+_addNat n m = App (App addNat n) m
+
+multNat :: Term
+multNat = abss "mnfx" (App (App (v "m") (App (v "n") (v "f"))) (v "x"))
+_multNat n m = App (App multNat n) m
+
+succNat = abss "nfx" (App (v "f") (App (App (v "n") (v "f")) (v "x")))
+
+iszero = abs "n" (App (App (v "n") (abs "x" false)) true)
+
+_iszero :: Term -> Term -> Term -> Term
+_iszero n f g = App (App (App iszero n) f) g
+
+
+predNat = abs "n" (_iszero (v "n") (zeroNat) 
+  (App (App (v "n") (abs "y" 
+    (App (App (v "y") (i)) (App (succNat) (v "y"))) )) 
+    (abss "ab" zeroNat)))
+_predNat n = App predNat n
+
+predNat1 = abss "nfx" (App (App (App (v "n") (abss "gh" (App (v "h") (App (v "g") (v "f"))))) (abs "u" (v "x"))) (i))
+
+minusNat = abss "nm" (App (App (v "m") predNat1 ) (v "n"))
+_minusNat n m = App (App minusNat n) m
+
+leqNat = abss "nm" (App iszero (_minusNat (v "n") (v "m")))
+_leqNat n m = App (App leqNat n) m
+
+eqNat = abss "nm" (_and (_leqNat (v "n") (v "m")) (_leqNat (v"m") (v"n")))
+_eqNat n m = App (App eqNat n) m
+
+
+--encode ordered pairs (a,b) as \z.zab
+pair :: (Term, Term) -> Term 
+pair (x,y) = abs "z" (App (App (v "z") (x)) (y))
+
+fst = abs "p" (App (v "p")(true))
+snd = abs "p" (App (v "p")(false))
+_fst p = App fst p
+_snd p = App snd p 
+
+churchInt :: Int -> Term
+churchInt x | x >= 0 = pair (churchNat x, zeroNat)
+            | otherwise = pair (zeroNat, churchNat (-x))
+
+uminus = abs "n" $ pair (App snd (v "n"), App fst (v "n"))
+_uminus n = App uminus n
+
+addInt = abss "nm" $ pair (_addNat (_fst (v "n")) (_fst (v "m")) , _addNat (_snd (v"n")) (_snd (v"m")) )
+_addInt n m = App (App addInt n) m
+
+minusInt = abss "nm" $ _addInt (v "n") (_uminus (v "m"))
+_minusInt n m = App (App minusInt n) m
+
+timesInt = abss "nm" $ pair ( _addNat (_multNat (_fst n) (_fst m)) (_multNat (_snd n) (_snd m))   , _addNat (_multNat (_fst n) (_snd m)) (_multNat (_fst m) (_snd n)) ) where 
+  n = v "n"
+  m = v "m"
+_timesInt n m = App (App timesInt n) m
+
+--test these
+equalInt = abss "nm" $ _and (_leqInt (v "n") (v "m")) (_leqInt (v "m") (v "n")) 
+lesserInt = abss "nm" $ _neg (_leqInt (v "m") (v "n"))
+_lesserInt n m = App (App lesserInt n) m
+leqInt = abss "nm" (_leqNat (_addNat (_fst $ v "n") (_snd $ v"m")) (_addNat (_fst $ v"m") (_snd $ v"n"))) 
+_leqInt n m = App (App leqInt n) m
+geqInt = abss "nm" $ _leqInt (v"m") (v "n")
+greaterInt = abss "nm" $  _lesserInt (v "m") (v "n")
+
+predInt = i
+succInt = i
+divideInt = i
 
 -- Some DB terms
 
-i       = DBAbs (DBVar 0)
-k       = DBAbs (DBAbs (DBVar 1))
-s       = DBAbs (DBAbs (DBAbs (DBApp
+i'       = DBAbs (DBVar 0)
+k'       = DBAbs (DBAbs (DBVar 1))
+s'       = DBAbs (DBAbs (DBAbs (DBApp
             (DBApp (DBVar 2)(DBVar 0))
             (DBApp (DBVar 1)(DBVar 0))) )) 
-b       = DBAbs (DBVar 2)
-true    = DBAbs (DBAbs (DBVar 1))
-false   = DBAbs (DBAbs (DBVar 0))
+b'       = DBAbs (DBVar 2)
+true'    = DBAbs (DBAbs (DBVar 1))
+false'   = DBAbs (DBAbs (DBVar 0))
 
+and'     = DBAbs (DBAbs (DBAbs (DBAbs (DBApp (DBApp (DBVar 3) (DBApp (DBApp (DBVar 2) (DBVar 1)) (DBVar 0)))(DBVar 0)))))
 
-y = DBAbs (DBApp g g) 
+or'     = DBAbs (DBAbs (DBAbs (DBAbs (DBApp (DBApp (DBVar 3) (DBVar 0))  (DBApp (DBApp (DBVar 2) (DBVar 1)) (DBVar 0))  ))))
+
+not' = DBAbs (DBAbs (DBAbs (DBApp (DBApp (DBVar 2) (DBVar 0)) (DBVar 1))))
+
+y' = DBAbs (DBApp g g) 
   where g = DBAbs $ DBApp (DBVar 1) (DBApp (DBVar 0) (DBVar 0))
 
-w = DBAbs (DBApp (DBVar 0) (DBVar 0))
-omega = DBApp w w
+w' = DBAbs (DBApp (DBVar 0) (DBVar 0))
+omega' = DBApp w' w'
 
-theta = DBApp x x where
+theta' = DBApp x x where
   x =  DBAbs (DBAbs (DBApp  (DBVar 0) (DBApp (DBApp (DBVar 1) (DBVar 1)) (DBVar 0))))
 
-zero    = DBAbs (DBAbs (DBVar 0))
+zero'    = DBAbs (DBAbs (DBVar 0))
 
-church :: Integer -> DBTerm
-church 0 = zero
-church n = DBAbs (DBAbs (DBApp 
+churchNat' :: Int -> DBTerm
+churchNat' 0 = zero'
+churchNat' n = DBAbs (DBAbs (DBApp 
   (DBVar 1)
   (DBApp 
-    (DBApp (church (n-1)) (DBVar 1)) 
+    (DBApp (churchNat' (n-1)) (DBVar 1)) 
     (DBVar 0))))
 
 succ'   = DBAbs (DBAbs (DBAbs (DBApp 
@@ -189,48 +298,48 @@ succ'   = DBAbs (DBAbs (DBAbs (DBApp
               (DBApp (DBVar 2) (DBVar 1)) 
               (DBVar 0)) ))) 
 
-iszero  = DBAbs (DBApp 
+iszero'  = DBAbs (DBApp 
           (DBApp 
             (DBVar 0) 
-            (DBAbs false))
-          (true))
+            (DBAbs false'))
+          (true'))
 
 pred' = DBAbs (DBApp 
   (DBApp 
-    (DBApp iszero (DBVar 0))
-    (zero)) 
+    (DBApp iszero' (DBVar 0))
+    (zero')) 
   (DBApp 
     (DBApp 
       (DBVar 0) 
       (DBAbs (DBApp 
-        (DBApp (DBVar 0) (i)) 
+        (DBApp (DBVar 0) (i')) 
         (DBApp (succ') (DBVar 0))))) 
-    (DBAbs (DBAbs zero)))) 
+    (DBAbs (DBAbs zero')))) 
 
-rcase = DBAbs (DBAbs (DBAbs (DBApp 
+rcase' = DBAbs (DBAbs (DBAbs (DBApp 
   (DBApp
-    (DBApp iszero (DBVar 2))
+    (DBApp iszero' (DBVar 2))
     (DBVar 1)) 
   (DBApp 
     (DBVar 0) 
     (DBApp pred' (DBVar 2)))) ))
 
-equals = DBApp y (DBAbs (DBAbs (DBAbs (DBApp 
-  (DBApp (DBApp iszero (DBVar 1)) (DBApp iszero (DBVar 0))) 
+equals' = DBApp y' (DBAbs (DBAbs (DBAbs (DBApp 
+  (DBApp (DBApp iszero' (DBVar 1)) (DBApp iszero' (DBVar 0))) 
   (DBApp 
-    (DBApp (DBApp iszero (DBVar 0)) (false)) 
+    (DBApp (DBApp iszero' (DBVar 0)) (false')) 
     (DBApp (DBApp (DBVar 2) (DBApp pred' (DBVar 1))) (DBApp pred' (DBVar 0)))) ))))
 
-add = DBAbs (DBAbs (DBAbs (DBAbs (DBApp 
+add' = DBAbs (DBAbs (DBAbs (DBAbs (DBApp 
   (DBApp (DBVar 3) (DBVar 1))
   (DBApp 
     (DBApp (DBVar 2) (DBVar 1)) 
     (DBVar 0))) )))
 
-geq = DBApp y (DBAbs (DBAbs (DBAbs (DBApp 
+geq' = DBApp y' (DBAbs (DBAbs (DBAbs (DBApp 
   (DBApp 
-    (DBApp rcase (DBVar 1)) 
-    (DBApp iszero (DBVar 0))) 
+    (DBApp rcase' (DBVar 1)) 
+    (DBApp iszero' (DBVar 0))) 
   (DBAbs (DBApp 
     (DBApp (DBVar 3) (DBVar 0)) 
     (DBApp pred' (DBVar 1)))))))) 
