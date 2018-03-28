@@ -17,8 +17,11 @@ act (Let d e) env = act e (elab d env)
 
 apply :: Action -> [Action] -> Action
 apply (Closure xs e env) as = act e (defargs env xs as)
-apply (Primitive p) as = undefined -- fix this
+apply (Primitive p) as = applyP p as 
 apply a as = Application a as
+
+applyP :: Prim -> [Action] -> Action
+applyP = undefined
 
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
@@ -28,6 +31,29 @@ elab :: Defn -> Env -> Env
 elab (Val x e) env = define env x (act e env)
 elab (Rec x e) env = define env x (DefRec x e env)
 
+act' :: Program -> Action
+act' (Program ds e) = act e (foldr elab [] ds)
 
+partial :: Action -> Partial Combinator 
+partial (NumAct n) = Hole (CInt n)
+partial (BoolAct a) = Hole (CBool a)
+partial (Param x) = PVar x
+partial (Closure (x:xs) e env) = foldr (PAbs) (PAbs x (partial $ act e env)) xs
+partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
+partial (Application f (e:es)) = foldl (PApp) (PApp (partial f) (partial e)) $ map partial es
+partial (Primitive p) = Hole (CPrim p)
 
+term' :: (a -> Term) -> Partial a -> Term
+term' f (PVar x) = Var x
+term' f (PApp s t) = App (term' f s) (term' f t)
+term' f (PAbs x s) = Abs x (term' f s)
+term' f (Hole x) = f x
 
+termP :: Prim -> Term
+termP = undefined
+
+termC :: Combinator -> Term
+termC = undefined
+
+term :: (Partial Combinator) -> Term
+term = term' termC
