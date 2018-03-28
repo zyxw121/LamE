@@ -108,3 +108,7 @@ pProgram = do
   e <- pExpr
   return $ Program defs e
 
+parseStrP :: String -> Program
+parseStrP s = case parse pProgram "" s of
+  Left e -> error $ show e
+  Right r -> r

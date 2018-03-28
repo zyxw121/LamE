@@ -31,8 +31,8 @@ elab :: Defn -> Env -> Env
 elab (Val x e) env = define env x (act e env)
 elab (Rec x e) env = define env x (DefRec x e env)
 
-act' :: Program -> Action
-act' (Program ds e) = act e (foldr elab [] ds)
+act' :: Program -> Env -> Action
+act' (Program ds e) env = act e (foldr elab env  ds)
 
 partial :: Action -> Partial Combinator 
 partial (NumAct n) = Hole (CInt n)
@@ -49,11 +49,28 @@ term' f (PApp s t) = App (term' f s) (term' f t)
 term' f (PAbs x s) = Abs x (term' f s)
 term' f (Hole x) = f x
 
-termP :: Prim -> Term
-termP = undefined
+termP :: Prim -> DBTerm
+termP Plus = add
+--termP Minus =  
+--termP Times = 
+--termP Divide =
+termP Pred = pred'
+termP Succ = succ'
+--termP And = 
+--termP Or = 
+--termP Not = 
+termP Equal = equals
+--termP Lesser =
+--termP Leq = 
+termP Geq = geq
+--termP Greater =
 
-termC :: Combinator -> Term
-termC = undefined
+termC :: Combinator -> DBTerm
+termC (CPrim p) = termP p
+termC (CInt n) = church n 
+termC (CBool True) = true
+termC (CBool False) = false
+termC (Y) = y
 
 term :: (Partial Combinator) -> Term
-term = term' termC
+term = term' (fromDB . termC)

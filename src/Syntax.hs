@@ -32,14 +32,13 @@ data Prim = Plus | Minus | Times | Divide | Pred | Succ
           | Equal | Lesser | Leq | Geq | Greater
           deriving (Show) 
 
-data Combinator = CPrim Prim | CInt Integer | CBool Bool| Y
+data Combinator = CPrim Prim | CInt Integer | CBool Bool | Y
 
 data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a
 
 
 type Environment a =  [(Name,a)] -- Mapping names to as
 type Env = Environment Action
-
 
 find :: Environment a -> Name -> Maybe a
 find env x = case (filter (\(a,b) -> a==x) env) of
@@ -49,4 +48,5 @@ find env x = case (filter (\(a,b) -> a==x) env) of
 define :: Environment a -> Name -> a -> Environment a
 define env x v = (x,v):env
 
-
+prim :: Env
+prim = []
