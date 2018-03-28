@@ -27,7 +27,7 @@ data Action = Param Name
             | Primitive Prim 
             deriving (Show)
 
-data Prim = Plus | Minus | Times | Divide | Pred | Succ
+data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
           | And | Or | Not 
           | Equal | Lesser | Leq | Geq | Greater
           deriving (Show) 

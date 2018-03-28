@@ -20,11 +20,33 @@ act (Let d e) env = act e (elab d env)
 
 apply :: Action -> [Action] -> Action
 apply (Closure xs e env) as = act e (defargs env xs as)
-apply (Primitive p) as = applyP p as 
+apply (Primitive p) as = applyPrim p as 
 apply a as = Application a as
 
-applyP :: Prim -> [Action] -> Action
-applyP = undefined
+--simplify with GADTs
+applyPrim :: Prim -> [Action] -> Action
+applyPrim (Plus) [NumAct n, NumAct m] = NumAct (n+m)
+applyPrim (Plus) [x,y] = Application (Primitive Plus) [x,y]
+applyPrim (Minus) [NumAct n, NumAct m] = NumAct (n-m)
+applyPrim (Minus) [x,y] = Application (Primitive Minus) [x,y]
+applyPrim (Times) [NumAct n, NumAct m] = NumAct (n*m)
+applyPrim (Times) [x,y] = Application (Primitive Times) [x,y]
+applyPrim (And) [BoolAct n, BoolAct m] = BoolAct (n&&m)
+applyPrim (And) [x,y] = Application (Primitive And) [x,y]
+applyPrim (Or) [BoolAct n, BoolAct m] = BoolAct (n||m)
+applyPrim (Or) [x,y] = Application (Primitive Or) [x,y]
+applyPrim (Not) [BoolAct n] = BoolAct (not n)
+applyPrim (Not) [x] = Application (Primitive Not) [x]
+applyPrim (Equal) [NumAct n, NumAct m] = BoolAct (n==m)
+applyPrim (Equal) [x,y] = Application (Primitive Equal) [x,y]
+applyPrim (Lesser) [NumAct n, NumAct m] = BoolAct (n<m)
+applyPrim (Lesser) [x,y] = Application (Primitive Lesser) [x,y]
+applyPrim (Leq) [NumAct n, NumAct m] = BoolAct (n<=m)
+applyPrim (Leq) [x,y] = Application (Primitive Leq) [x,y]
+applyPrim (Geq) [NumAct n, NumAct m] = BoolAct (n>=m)
+applyPrim (Geq) [x,y] = Application (Primitive Geq) [x,y]
+applyPrim (Greater) [NumAct n, NumAct m] = BoolAct (n>m)
+applyPrim (Greater) [x,y] = Application (Primitive Greater) [x,y]
 
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
@@ -58,7 +80,8 @@ termP :: Prim -> Term
 termP Plus = addInt
 termP Minus = minusInt 
 termP Times = timesInt
---termP Divide = divideInt
+-- think about these
+--termP Divide = divideInt 
 --termP Pred = predInt
 --termP Succ = succInt
 termP And = and
