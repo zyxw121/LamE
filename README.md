@@ -6,7 +6,7 @@ The LAMbda Evaluater (LamE) compiles a small Scheme-like functional langauge to 
 Build with [Stack](https://docs.haskellstack.org/en/stable/README/).
 
 ```
-  $ git pull https://github.com/zyxw121/LamE && cd LamE
+  $ git clone https://github.com/zyxw121/LamE.git && cd LamE
   $ stack setup && stack build  
 ```
 
@@ -22,7 +22,7 @@ or
 The executable `LamE` takes one LamE source file as an argument and prints the result to standard output.
 
 ```
-  $ echo "(let x = 1 in 4 + x)" > source.lm
+  $ echo "(val y = 4; let val x = 1 in y + x)" > source.lm
   $ LamE source.lm
     5
 ```
