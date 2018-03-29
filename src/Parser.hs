@@ -1,106 +1,105 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Parser where
 import Syntax
 import Core
+import Data.Char
 import Text.ParserCombinators.Parsec 
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 
-rnames = words "true false if then else let val rec func in "
+rnames = words "true false if then else let val rec func in = "
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
 languageDef = 
   emptyDef  { Token.commentLine     = "//"
-            , Token.identStart      = letter
+            , Token.identStart      = letter <|> oneOf "+-*/<=>"
             , Token.identLetter     = oneOf alloweds
             , Token.reservedNames   = rnames
             , Token.reservedOpNames = rops
-            
+            , Token.caseSensitive = False 
             }
 
 lexer = Token.makeTokenParser languageDef
 
-identifier = Token.identifier lexer >>= return . Name-- parses an identifier as a Name
-reserved   = Token.reserved   lexer -- parses a reserved name
+--identifier = Token.identifier lexer >>= return . Name-- parses an identifier as a Name
+--reserved   = Token.reserved   lexer -- parses a reserved name
 reservedOp = Token.reservedOp lexer -- parses an operator
-parens     = Token.parens     lexer -- parses surrounding parenthesis:
+--parens     = Token.parens     lexer -- parses surrounding parenthesis:
 integer    = Token.integer    lexer -- parses an integer
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 semi       = Token.semi       lexer
 
-white :: Parser ()
-white = do
-  s <- many1 space
-  return ()
+--Helper funcs
+parens :: Parser a -> Parser a
+parens p = do
+  char '('
+  x <- p
+  char ')'
+  return x
 
-pExpr :: Parser (Expr )
-pExpr = pVar
-      <|> pBool
-      <|> pNum 
-      <|> pIf 
-      <|> try (parens (pFunc <|> pApply <|> pLet)) 
-      <|> parens pExpr
+white :: Parser ()
+white = skipMany1 space
+
+ident :: Parser String
+ident = do
+  x <- letter <|> oneOf "+-*/<=>"
+  xs <- many $ oneOf alloweds 
+  return (x:xs)
+
+identifier :: Parser Name
+identifier = try $ do
+  name <- ident
+  if name `elem` rnames then unexpected ("reserved word") else return . Name $ name
+
+reserved :: String -> Parser ()
+reserved name = try $ do 
+  _ <- caseString name
+  notFollowedBy (identLetter languageDef) <?> ("end of " ++ show name)
+
+caseString :: String -> Parser String
+caseString name = do{ walk name; return name }
+  where
+    walk []     = return ()
+    walk (c:cs) = do{ _ <- caseChar c <?> msg; walk cs }
+    caseChar c  | isAlpha c  = char (toLower c) <|> char (toUpper c)
+                | otherwise  = char c
+    msg         = show name 
+
+
+-- parsing Exprs
+pExpr :: Parser Expr
+pExpr = do
+  skipMany space
+  xs <- sepEndBy1 pExpr' white
+  case xs of
+    [] -> unexpected "empty"
+    [x] -> return x
+    (x:y:ys) -> return $ Apply x (y:ys)
+
+pExpr' :: Parser Expr
+pExpr' = pConst <|> parens pExpr
+
+pConst = pVar <|> pNum <|> pBool
+
+pNum :: Parser Expr
+pNum = integer >>= return . NumExp . fromIntegral
 
 pBool :: Parser Expr
 pBool = (reserved "true" >> return (BoolExp True))
-      <|> (reserved "false" >> return (BoolExp False))
+     <|>(reserved "false" >> return (BoolExp False))
 
-pNum :: Parser (Expr )
-pNum = integer >>= return . NumExp . fromIntegral
+pVar :: Parser Expr
+pVar = identifier >>= return . VarExp 
 
-pVar :: Parser (Expr )
-pVar = identifier >>= return . VarExp
+parseExpr :: String -> Expr
+parseExpr s = case parse (pExpr <* eof) "" s of
+  Left e -> error $ show e
+  Right r -> r
 
-pIf :: Parser (Expr )
-pIf = do
-  reserved "if"
-  cond <- pExpr
-  reserved "then"
-  left <- pExpr
-  reserved "else"
-  right <- pExpr
-  return $ If cond left right
-
-pFunc :: Parser (Expr )
-pFunc = do
-  reserved "func"
-  xs <- parens $ sepBy1 identifier white
-  body <- parens $ pExpr
-  return $ Func xs body
-
-pApply :: Parser (Expr )
-pApply = do
-  f <- pExpr
-  args <- sepBy1 pExpr whiteSpace
-  return $ Apply f args
-
-pLet :: Parser (Expr )
-pLet = do
-  reserved "let"
-  def <- pDefn
-  reserved "in"
-  e <- pExpr
-  return $ Let def e
-
-pDefn :: Parser (Defn )
-pDefn = pVal <|> pRec
-
-pVal :: Parser (Defn )
-pVal = do
-  reserved "val"
-  x <- identifier
-  reservedOp "="
-  e <- pExpr
-  return $ Val x e
-
-pRec :: Parser (Defn )
-pRec = do
-  reserved "rec"
-  x <- identifier
-  reservedOp "="
-  e <- pExpr
-  return $ Rec x e
+pDefn :: Parser Defn
+pDefn = undefined
 
 pProgram :: Parser (Program )
 pProgram = do

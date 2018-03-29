@@ -10,13 +10,13 @@ data Expr  = VarExp Name
             | Func [Name] Expr
             | Apply Expr [Expr]
             | Let Defn Expr 
-            deriving (Show)
+            deriving (Eq, Show)
 
 data Defn  = Val Name Expr 
             | Rec Name Expr
-            deriving (Show) 
+            deriving (Eq, Show) 
          
-data Program  = Program [Defn] Expr deriving (Show)
+data Program  = Program [Defn] Expr deriving (Eq, Show)
 
 data Action = Param Name 
             | NumAct Int 
