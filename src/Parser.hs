@@ -9,29 +9,33 @@ import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 
-rnames = words "true false if then else let val rec func in = "
+reserveds = words "true false if then else let val rec func in = "
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
-languageDef = 
-  emptyDef  { Token.commentLine     = "//"
-            , Token.identStart      = letter <|> oneOf "+-*/<=>"
-            , Token.identLetter     = oneOf alloweds
-            , Token.reservedNames   = rnames
-            , Token.reservedOpNames = rops
-            , Token.caseSensitive = False 
-            }
 
-lexer = Token.makeTokenParser languageDef
 
---identifier = Token.identifier lexer >>= return . Name-- parses an identifier as a Name
---reserved   = Token.reserved   lexer -- parses a reserved name
-reservedOp = Token.reservedOp lexer -- parses an operator
---parens     = Token.parens     lexer -- parses surrounding parenthesis:
-integer    = Token.integer    lexer -- parses an integer
-whiteSpace = Token.whiteSpace lexer -- parses whitespace
-semi       = Token.semi       lexer
+semi :: Parser ()
+semi = do
+  char ';'
+  skipMany white
 
 --Helper funcs
+zeroNumber :: Parser Int
+zeroNumber  = do
+  _ <- char '0'
+  number  <|> return 0
+
+number = do
+  digits <- many1 digit
+  let n = foldl (\x d -> 10*x +  (digitToInt d)) 0 digits
+  seq n (return n)
+
+integer :: Parser Int
+integer = do
+  f <- option id (char '-' >> return negate)
+  n <- zeroNumber <|> number
+  return $ f n 
+
 parens :: Parser a -> Parser a
 parens p = do
   char '('
@@ -48,15 +52,24 @@ ident = do
   xs <- many $ oneOf alloweds 
   return (x:xs)
 
+identifier' :: Parser Name
+identifier' = do
+  x <- identifier
+  skipMany space
+  return x
+
 identifier :: Parser Name
 identifier = try $ do
   name <- ident
-  if name `elem` rnames then unexpected ("reserved word") else return . Name $ name
+  if name `elem` reserveds then unexpected ("reserved word") else return . Name $ name
 
 reserved :: String -> Parser ()
-reserved name = try $ do 
+reserved s = reserved' s >> skipMany space
+
+reserved' :: String -> Parser ()
+reserved' name = try $ do 
   _ <- caseString name
-  notFollowedBy (identLetter languageDef) <?> ("end of " ++ show name)
+  notFollowedBy (oneOf alloweds) <?> ("end of " ++ show name)
 
 caseString :: String -> Parser String
 caseString name = do{ walk name; return name }
@@ -66,7 +79,6 @@ caseString name = do{ walk name; return name }
     caseChar c  | isAlpha c  = char (toLower c) <|> char (toUpper c)
                 | otherwise  = char c
     msg         = show name 
-
 
 -- parsing Exprs
 pExpr :: Parser Expr
@@ -79,12 +91,14 @@ pExpr = do
     (x:y:ys) -> return $ Apply x (y:ys)
 
 pExpr' :: Parser Expr
-pExpr' = pConst <|> parens pExpr
+pExpr' = pConst 
+      <|> pIf <|> pLet <|> pFunc
+      <|> parens pExpr
 
 pConst = pVar <|> pNum <|> pBool
 
 pNum :: Parser Expr
-pNum = integer >>= return . NumExp . fromIntegral
+pNum = integer >>= return . NumExp 
 
 pBool :: Parser Expr
 pBool = (reserved "true" >> return (BoolExp True))
@@ -93,15 +107,66 @@ pBool = (reserved "true" >> return (BoolExp True))
 pVar :: Parser Expr
 pVar = identifier >>= return . VarExp 
 
+pIf :: Parser Expr
+pIf = do
+  reserved "if"
+  c <- pExpr
+  reserved "then"
+  x <- pExpr
+  reserved "else"
+  y <- pExpr
+  return $ If c x y
+
+pArgs :: Parser [Name]
+pArgs = do
+  char '('
+  skipMany space
+  xs <- sepEndBy1 identifier white <|> sepBy1 identifier white
+  skipMany space
+  char ')'
+  return xs
+
+pFunc :: Parser Expr
+pFunc = do
+  reserved "func"
+  xs <- pArgs 
+  skipMany space
+  body <- parens pExpr
+  return $ Func xs body
+
+pLet :: Parser Expr
+pLet = do
+  reserved "let"
+  d <- pDefn
+  reserved "in"
+  e <- pExpr
+  return $ Let d e
+  
 parseExpr :: String -> Expr
 parseExpr s = case parse (pExpr <* eof) "" s of
   Left e -> error $ show e
   Right r -> r
 
 pDefn :: Parser Defn
-pDefn = undefined
+pDefn = pVal <|> pRec
 
-pProgram :: Parser (Program )
+pVal :: Parser Defn
+pVal = do
+  reserved "val"
+  x <- try identifier'
+  reserved "="
+  e <- pExpr
+  return $ Val x e 
+
+pRec :: Parser Defn
+pRec = do
+  reserved "rec"
+  x <- identifier'
+  reserved "="
+  e <- pExpr
+  return $ Rec x e 
+
+pProgram :: Parser Program
 pProgram = do
   defs <- many (pDefn >>= (\x -> semi >> return x)) --list of ';' seperated defns
   e <- pExpr
