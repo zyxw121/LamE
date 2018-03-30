@@ -19,9 +19,8 @@ var = VarExp . Name
 spec :: Spec
 spec = do
   describe "pNum" $ do
-    it "parses numbers" $ do
-      parse pNum "" "4" `shouldBe` Right (NumExp 4)
-      parse pNum "" "40" `shouldBe` Right (NumExp 40)
+    it "parses numbers" $ property $
+      \x -> parse pNum "" (show x) == Right (NumExp x) 
     it "ignores leading zeroes" $ do
       parse pNum "" "0" `shouldBe` Right (NumExp 0)
       parse pNum "" "0004" `shouldBe` Right (NumExp 4)
@@ -40,6 +39,23 @@ spec = do
     it "ignores cases" $ do
       parse pBool "" "FALSE" `shouldBe` Right (BoolExp False)
       parse pBool "" "FaLsE" `shouldBe` Right (BoolExp False)
+  describe "pChar" $ do
+    it "parses any char" $ property $
+      \x -> parse pChar "" ("\'"++[x]++"\'") == Right (CharExp x)
+    it "won't parse empty or multiple" $ do
+      parse pChar "" "\'\'" `shouldSatisfy` parseError
+      parse pChar "" "\'aa\'" `shouldSatisfy` parseError
+-- Strings are annoying, but this probably works
+--  describe "pString" $ do
+--    it "parses any string" $ property $ 
+--      \x -> parse pString "" (x) == Right (StringExp x)
+
+  describe "pList" $ do
+    it "parses empty" $ do
+      parse pList "" "[]" `shouldBe` Right (ListExp [])
+      parse pList "" "[    ]" `shouldBe` Right (ListExp [])
+    it "parses lists" $ property $ 
+      parse pList "" "[ 1   , 3,-1,5, 4  , -5  ]" `shouldBe` Right ( ListExp (map NumExp [1,3,-1,5,4,-5]))
   describe "pVar" $ do
     it "parses letters" $ do
       parse pVar "" "a" `shouldBe` Right (VarExp $ Name "a")

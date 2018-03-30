@@ -2,7 +2,7 @@ module LamE where
 import Prelude hiding (pred, succ, and, or)
 import Core
 import Syntax
-
+import Terms
 
 --Env -> Action
 act :: Expr -> Env -> Action
@@ -11,6 +11,9 @@ act (VarExp n) env = case find env n of
   Nothing -> Param n
 act (BoolExp b) env = BoolAct b
 act (NumExp n) env = NumAct n
+act (CharExp c) env = CharAct c
+act (StringExp s) env = StringAct s
+act (ListExp xs) env = ListAct (map (\e -> act e env) xs)
 act (If c e1 e2) env = case (act c env) of
   BoolAct b -> if b then (act e1 env) else (act e2 env)
   v -> Application v [act e1 env, act e2 env]
@@ -47,6 +50,18 @@ applyPrim (Geq) [NumAct n, NumAct m] = BoolAct (n>=m)
 applyPrim (Geq) [x,y] = Application (Primitive Geq) [x,y]
 applyPrim (Greater) [NumAct n, NumAct m] = BoolAct (n>m)
 applyPrim (Greater) [x,y] = Application (Primitive Greater) [x,y]
+applyPrim (ChEqual) [CharAct n, CharAct m] = BoolAct (n==m)
+applyPrim (ChEqual) [x,y] = Application (Primitive ChEqual) [x,y]
+applyPrim (Head) [ListAct xs] = (head xs) 
+applyPrim (Head) [x] = Application (Primitive Head) [x]
+applyPrim (Tail) [ListAct xs] = ListAct (tail xs) 
+applyPrim (Tail) [x] = Application (Primitive Tail) [x]
+applyPrim (Cons) [x, ListAct xs] = ListAct (x:xs) 
+applyPrim (Cons) [x, y] = Application (Primitive Cons) [x,y]
+applyPrim (Empty) [ListAct xs] = BoolAct (xs==[]) 
+applyPrim (Empty) [x] = Application (Primitive Empty) [x]
+applyPrim (StrEqual) [StringAct n, StringAct m] = BoolAct (n==m)
+applyPrim (StrEqual) [x,y] = Application (Primitive StrEqual) [x,y]
 
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
@@ -64,6 +79,9 @@ act' (Program ds e) env = act e (foldr elab env  ds)
 partial :: Action -> Partial Combinator 
 partial (NumAct n) = Hole (CInt n)
 partial (BoolAct a) = Hole (CBool a)
+partial (CharAct c) = Hole (CChar c)
+partial (StringAct s) = Hole (CString s)
+partial (ListAct xs) = Hole (CList (map partial xs))
 partial (Param x) = PVar x
 partial (Closure (x:xs) e env) = foldr (PAbs) (PAbs x (partial $ act e env)) xs
 partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
@@ -92,12 +110,21 @@ termP Lesser = lesserInt
 termP Leq = leqInt
 termP Geq = geqInt
 termP Greater = greaterInt
+termP ChEqual = equalChar
+termP Head = headT
+termP Tail = tailT
+termP Cons = cons
+termP Empty = emptyList
+termP StrEqual = equalString
 
 termC :: Combinator -> Term
 termC (CPrim p) = termP p
 termC (CInt n) = churchInt n 
 termC (CBool True) = true
 termC (CBool False) = false
+termC (CChar c) = churchChar c
+termC (CList xs) = churchList $ map term xs
+termC (CString s) = churchString s
 termC (Y) = y 
 
 term :: (Partial Combinator) -> Term

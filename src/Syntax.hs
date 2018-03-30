@@ -4,6 +4,9 @@ import Core
 type Ident = String
 
 data Expr  = VarExp Name
+            | CharExp Char
+            | ListExp [Expr]
+            | StringExp String
             | BoolExp Bool 
             | NumExp Int
             | If Expr Expr Expr
@@ -19,24 +22,28 @@ data Defn  = Val Name Expr
 data Program  = Program [Defn] Expr deriving (Eq, Show)
 
 data Action = Param Name 
-            | NumAct Int 
+            | CharAct Char
+            | ListAct [Action]
+            | StringAct String
             | BoolAct Bool 
+            | NumAct Int 
             | Closure [Name] Expr Env 
             | DefRec Name Expr Env 
             | Application Action [Action] 
             | Primitive Prim 
-            deriving (Show)
+            deriving (Show, Eq)
 
 data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
           | And | Or | Not 
           | Equal | Lesser | Leq | Geq | Greater
-          deriving (Show) 
+          | ChEqual
+          | Head | Tail | Cons | Empty
+          | StrEqual
+          deriving (Show, Eq) 
 
-data Combinator = CPrim Prim | CInt Int | CBool Bool | Y deriving (Show)
+data Combinator = CPrim Prim | CInt Int | CBool Bool | CChar Char | CList [Partial Combinator] | CString  String | Y deriving (Show)
 
 data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a deriving (Show)
-
-
 
 type Environment a =  [(Name,a)] -- Mapping names to as
 type Env = Environment Action
@@ -49,8 +56,8 @@ find env x = case (filter (\(a,b) -> a==x) env) of
 define :: Environment a -> Name -> a -> Environment a
 define env x v = (x,v):env
 
-prim :: Env
-prim = map (\(n,p) -> (Name n, Primitive p)) 
+prims :: Env
+prims = map (\(n,p) -> (Name n, Primitive p)) 
   [ ("+", Plus)
   , ("-", Minus)
   , ("*", Times)
@@ -61,4 +68,15 @@ prim = map (\(n,p) -> (Name n, Primitive p))
   , ("<", Lesser)
   , ("<=", Leq)
   , (">=", Geq)
-  , (">", Greater) ]
+  , (">", Greater)
+  , ("=c", ChEqual)
+  , ("head", Head)
+  , ("tail", Tail)
+  , ("cons", Cons)
+  , ("empty", Empty)
+  , ("=s", StrEqual) ]
+
+consts = map (\(n,a) -> (Name n, a)) 
+  [("nil", ListAct []) ]
+
+prim = prims ++ consts

@@ -22,9 +22,9 @@ or
 The executable `LamE` takes one LamE source file as an argument and prints the result to standard output.
 
 ```
-  $ echo "(val y = 4; let val x = 1 in y + x)" > source.lm
+  $ echo "(val y = 4; let val x = 1 in + y x)" > source.lm
   $ LamE source.lm
-    5
+   \z.(z(\fx.f(f(f(f(fx))))))(\fx.f)
 ```
 
 

@@ -12,8 +12,6 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 reserveds = words "true false if then else let val rec func in = "
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
-
-
 semi :: Parser ()
 semi = do
   char ';'
@@ -95,7 +93,7 @@ pExpr' = pConst
       <|> pIf <|> pLet <|> pFunc
       <|> parens pExpr
 
-pConst = pVar <|> pNum <|> pBool
+pConst =  pNum <|> pVar <|>pBool <|> pChar <|> pString <|> pList
 
 pNum :: Parser Expr
 pNum = integer >>= return . NumExp 
@@ -103,6 +101,46 @@ pNum = integer >>= return . NumExp
 pBool :: Parser Expr
 pBool = (reserved "true" >> return (BoolExp True))
      <|>(reserved "false" >> return (BoolExp False))
+
+pChar :: Parser Expr
+pChar = do
+  char '\''
+  x <- anyChar
+  char '\''
+  return $ CharExp x
+
+pEscape :: Parser Char
+pEscape = do 
+  char '\\' 
+  x <- oneOf "\\\"nrt" 
+  return $ case x of 
+    '\\' -> x
+    '"'  -> x
+    'n'  -> '\n'
+    'r'  -> '\r'
+    't'  -> '\t'
+
+comma :: Parser ()
+comma = do
+  skipMany space
+  char ','
+  skipMany space
+
+pList :: Parser Expr
+pList = do
+  char '['
+  skipMany space
+  xs <- sepEndBy pExpr comma <|> sepBy pExpr comma
+  skipMany space
+  char ']'
+  return $ ListExp xs
+
+pString :: Parser Expr
+pString = do
+  char '\"'
+  xs <- many $ pEscape <|> noneOf "\"\\"
+  char '\"'
+  return $ StringExp xs
 
 pVar :: Parser Expr
 pVar = identifier >>= return . VarExp 
