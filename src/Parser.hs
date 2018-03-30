@@ -93,7 +93,7 @@ pExpr' = pConst
       <|> pIf <|> pLet <|> pFunc
       <|> parens pExpr
 
-pConst =  pNum <|> pVar <|>pBool <|> pChar <|> pString <|> pList
+pConst =  try pNum <|> pVar <|>pBool <|> pChar <|> pString <|> pList
 
 pNum :: Parser Expr
 pNum = integer >>= return . NumExp 
