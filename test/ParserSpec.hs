@@ -56,6 +56,13 @@ spec = do
       parse pList "" "[    ]" `shouldBe` Right (ListExp [])
     it "parses lists" $ property $ 
       parse pList "" "[ 1   , 3,-1,5, 4  , -5  ]" `shouldBe` Right ( ListExp (map NumExp [1,3,-1,5,4,-5]))
+  describe "pTerm" $ do
+    it "parses vars" $ do
+      parse pExpr "" "(Var \"a\")" `shouldBe` Right (TermExp (Var (Name "a")))
+    it "parses App" $ do
+      parse pExpr "" "(App (Var \"a\") (Var \"b\") )" `shouldBe` Right (TermExp (App (Var (Name "a")) (Var (Name "b"))))
+    it "parses Abs" $ do
+      parse pExpr "" "(Abs \"a\" (Var \"a\") )" `shouldBe` Right (TermExp (Abs (Name "a") (Var (Name "a")) ))
   describe "pVar" $ do
     it "parses letters" $ do
       parse pVar "" "a" `shouldBe` Right (VarExp $ Name "a")

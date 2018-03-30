@@ -3,13 +3,13 @@ module Parser where
 import Syntax
 import Core
 import Data.Char
-import Text.ParserCombinators.Parsec 
+import Text.ParserCombinators.Parsec hiding (string) 
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 
-reserveds = words "true false if then else let val rec func in = "
+reserveds = words "true false if then else let val rec func in = Var App Abs match as"
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
 semi :: Parser ()
@@ -90,10 +90,33 @@ pExpr = do
 
 pExpr' :: Parser Expr
 pExpr' = pConst 
-      <|> pIf <|> pLet <|> pFunc
+      <|> pIf <|> pLet <|> pFunc <|> pMatch
       <|> parens pExpr
 
-pConst =  try pNum <|> pVar <|>pBool <|> pChar <|> pString <|> pList
+-- Constants
+pConst =  try pNum <|> pVar <|> try (pTerm >>= return . TermExp) <|>pBool <|> pChar <|> pString <|> pList
+
+pTerm :: Parser Term
+pTerm = (pVarT <|> pApp <|> pAbs)
+
+pVarT = do
+  reserved "Var"
+  x <- string
+  return . Var . Name $ x
+
+pApp = do
+  reserved "App"
+  s <- parens pTerm
+  white
+  t <- parens pTerm 
+  return $ App s t
+
+pAbs = do
+  reserved "Abs"
+  x <- string
+  white
+  s <- parens pTerm
+  return $ Abs (Name x) s
 
 pNum :: Parser Expr
 pNum = integer >>= return . NumExp 
@@ -135,16 +158,20 @@ pList = do
   char ']'
   return $ ListExp xs
 
-pString :: Parser Expr
-pString = do
+string :: Parser String
+string = do
   char '\"'
   xs <- many $ pEscape <|> noneOf "\"\\"
   char '\"'
-  return $ StringExp xs
+  return xs
+
+pString :: Parser Expr
+pString = string >>= return .  StringExp 
 
 pVar :: Parser Expr
 pVar = identifier >>= return . VarExp 
 
+-- Others
 pIf :: Parser Expr
 pIf = do
   reserved "if"
@@ -154,6 +181,38 @@ pIf = do
   reserved "else"
   y <- pExpr
   return $ If c x y
+
+-- ewww
+pMatch :: Parser Expr
+pMatch = do
+  reserved "match"
+  x <- pExpr
+  reserved "as"
+  char '('
+  skipMany space
+  reserved "Var"
+  x1 <- identifier'
+  char ')'
+  skipMany space
+  e1 <- parens pExpr
+  skipMany space
+  char '('
+  reserved "App"
+  s2 <- identifier'
+  t2 <- identifier'
+  char ')'
+  skipMany space
+  e2 <- parens pExpr
+  skipMany space
+  char '('
+  reserved "Abs"
+  x3 <- identifier'
+  s3 <- identifier'
+  char ')'
+  skipMany space
+  e3 <- parens pExpr  
+  return $ Match x (x1, e1) (s2,t2,e2) (x3,s3,e3)
+
 
 pArgs :: Parser [Name]
 pArgs = do

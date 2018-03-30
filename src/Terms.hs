@@ -189,7 +189,11 @@ churchString = churchList . map churchChar
 
 unString = map unChar . unList
 
+-- Terms
 
+churchTerm (Var (Name n)) = abss "abc" $ App (v"a") (churchString n)
+churchTerm (App s t) = abss "abc" $ app2 (v"b") (churchTerm s) (churchTerm t)
+churchTerm (Abs (Name n) s) = abss "abc" $ app2 (v "c") (churchString n) (churchTerm s)
 
 
 

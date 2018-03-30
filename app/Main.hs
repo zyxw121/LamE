@@ -10,10 +10,7 @@ main = do
   (path:ps) <- getArgs
   source <- readFile path 
   let prog = parseStrP source
-  print prog
   let res = term . partial $ act' prog prim
-  print  $ act' prog prim
   print res
-  print . bnf' . toDB $ res
        
    

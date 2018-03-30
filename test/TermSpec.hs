@@ -21,7 +21,7 @@ spec = do
   describe "Ints" $ do
     modifyMaxSize (const 100) $it "converts" $ property $ 
       \x -> (unInt . churchInt) x == (x::Int)
-    modifyMaxSize (const 50) $ it "adds" $ property $ 
+{-    modifyMaxSize (const 50) $ it "adds" $ property $ 
       \x y -> tInt _addInt x y == ( (x::Int) + (y::Int) )
     modifyMaxSize (const 50) $it "subtracts" $ property $ 
       \x y -> tInt _minusInt x y == ( (x::Int) - (y::Int) )
@@ -67,5 +67,5 @@ spec = do
       \x xs -> (unBool . bnf $ _equalInt (churchInt x) (_headT (_cons (churchInt x) (churchInt xs)) )) && ( unBool . bnf $ _equalInt (churchInt xs) (_tailT (_cons (churchInt x)(churchInt xs)))     )
   describe "Strings" $ do
     modifyMaxSize (const 5) $ it "converts" $ property $ 
-      \s -> (unString . churchString) s == s
+      \s -> (unString . churchString) s == s-}
 

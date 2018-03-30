@@ -4,12 +4,14 @@ import Core
 type Ident = String
 
 data Expr  = VarExp Name
+            | TermExp Term
             | CharExp Char
             | ListExp [Expr]
             | StringExp String
             | BoolExp Bool 
             | NumExp Int
             | If Expr Expr Expr
+            | Match Expr (Name, Expr) (Name, Name, Expr) (Name, Name, Expr)
             | Func [Name] Expr
             | Apply Expr [Expr]
             | Let Defn Expr 
@@ -21,7 +23,8 @@ data Defn  = Val Name Expr
          
 data Program  = Program [Defn] Expr deriving (Eq, Show)
 
-data Action = Param Name 
+data Action = Param Name
+            | TermAct Term 
             | CharAct Char
             | ListAct [Action]
             | StringAct String
@@ -41,7 +44,7 @@ data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
           | StrEqual
           deriving (Show, Eq) 
 
-data Combinator = CPrim Prim | CInt Int | CBool Bool | CChar Char | CList [Partial Combinator] | CString  String | Y deriving (Show)
+data Combinator = CPrim Prim | CInt Int | CBool Bool | CChar Char | CList [Partial Combinator] | CString  String | CTerm Term | Y deriving (Show)
 
 data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a deriving (Show)
 

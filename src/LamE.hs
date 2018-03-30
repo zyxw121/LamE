@@ -9,11 +9,17 @@ act :: Expr -> Env -> Action
 act (VarExp n) env = case find env n of
   Just v -> v
   Nothing -> Param n
+act (TermExp t) env = TermAct t
 act (BoolExp b) env = BoolAct b
 act (NumExp n) env = NumAct n
 act (CharExp c) env = CharAct c
 act (StringExp s) env = StringAct s
 act (ListExp xs) env = ListAct (map (\e -> act e env) xs)
+act m@(Match x (y,e1) (s,t,e2) (z,u,e3)) env = case act x env of --hmmmm
+  (TermAct (Var (Name y'))) -> act e1 (define env y (StringAct y') )
+  (TermAct (App s' t')) -> act e2 (define (define env s (TermAct s')) t (TermAct t') )
+  (TermAct (Abs (Name z') u')) -> act e3 (define (define env u (TermAct u')) z (StringAct z'))
+  v -> Application v [act (Func [y] e1) env, act (Func [s,t] e2) env, act (Func [z,u] e3) env]
 act (If c e1 e2) env = case (act c env) of
   BoolAct b -> if b then (act e1 env) else (act e2 env)
   v -> Application v [act e1 env, act e2 env]
@@ -77,6 +83,7 @@ act' (Program ds e) env = act e (foldr elab env  ds)
 --Action -> Term, in several steps
 
 partial :: Action -> Partial Combinator 
+partial (TermAct t) = Hole (CTerm t)
 partial (NumAct n) = Hole (CInt n)
 partial (BoolAct a) = Hole (CBool a)
 partial (CharAct c) = Hole (CChar c)
@@ -125,6 +132,7 @@ termC (CBool False) = false
 termC (CChar c) = churchChar c
 termC (CList xs) = churchList $ map term xs
 termC (CString s) = churchString s
+termC (CTerm t) = churchTerm t
 termC (Y) = y 
 
 term :: (Partial Combinator) -> Term
