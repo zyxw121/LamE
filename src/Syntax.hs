@@ -32,9 +32,10 @@ data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
           | Equal | Lesser | Leq | Geq | Greater
           deriving (Show) 
 
-data Combinator = CPrim Prim | CInt Int | CBool Bool | Y
+data Combinator = CPrim Prim | CInt Int | CBool Bool | Y deriving (Show)
 
-data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a
+data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a deriving (Show)
+
 
 
 type Environment a =  [(Name,a)] -- Mapping names to as
@@ -49,4 +50,15 @@ define :: Environment a -> Name -> a -> Environment a
 define env x v = (x,v):env
 
 prim :: Env
-prim = []
+prim = map (\(n,p) -> (Name n, Primitive p)) 
+  [ ("+", Plus)
+  , ("-", Minus)
+  , ("*", Times)
+  , ("and", And)
+  , ("or", Or)
+  , ("not", Not)
+  , ("==", Equal)
+  , ("<", Lesser)
+  , ("<=", Leq)
+  , (">=", Geq)
+  , (">", Greater) ]

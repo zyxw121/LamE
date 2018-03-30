@@ -4,9 +4,9 @@ import Control.Applicative
 import Prelude hiding (and, or, abs, pred, succ, fst, snd)
 
 --data Name = Name {name :: Char, num :: Int }  deriving (Eq)
-data Term = Var Name | Abs Name Term | App Term Term
+data Term = Var Name | Abs Name Term | App Term Term deriving (Eq)
 
-data DBTerm = DBVar Int | DBAbs DBTerm | DBApp DBTerm DBTerm
+data DBTerm = DBVar Int | DBAbs DBTerm | DBApp DBTerm DBTerm deriving (Eq)
 
 -- 0 <-> a_0, 1 <-> b_0, ... etc
 --instance Enum Name where 
@@ -150,9 +150,32 @@ bnf' t = case lred' t of
   Nothing -> t
   Just t' -> bnf' t'
 
+--get things back from bnf terms
+churchBool :: Bool -> Term
+churchBool True = true
+churchBool False = false
+
+unBool :: Term -> Bool
+unBool s | toDB s == true' = True
+         | toDB s == false' = False
+         | otherwise = error "not boolean"
+
+unNat' :: Term -> Int -> Int
+unNat' s n | toDB s == bnf' (churchNat' n) = n
+           | otherwise = unNat' s (n+1)
+unNat s = unNat' s 0
+
+unPair :: Term -> (Term, Term)
+unPair s = (fromDB . bnf' . toDB . _fst $ s, fromDB . bnf' . toDB . _snd $s )
+
+unInt :: Term -> Int
+unInt s = let (a,b) = unPair s in (unNat a) - (unNat b)
+
 --Some terms
 abs = Abs . Name
 v= Var . Name
+
+app2 a b c = App (App a b) c
 
 abss :: String -> Term -> Term
 abss [x] t = abs (x:[]) t
@@ -162,8 +185,6 @@ i = abs "x" (v"x")
 s = abss "abc" (App (App (v "a") (v "c")) (App (v "b") (v "c")))
 k = abss "xy" (v "y")
 
-
-
 y = abs "f" (App x x)
   where x = abs "x" (App (v "f") (App (v"x") (v"x"))) 
 
@@ -171,10 +192,11 @@ true = abs "a" (abs "b" $ v"a" )
 false = abs "a" (abs "b" $ v"b" )
 
 and = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
-_and a b = App (App and a) b
-or = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
+_and = app2 and 
+or = abss "xyab" (App (App (v "x") (v"a")) ( (App (App (v"y") (v"a")) (v"b")) )) 
+_or  = app2 or 
 neg = abss "xab" (App (App (v "x") (v"b"))(v"a"))
-_neg a = App neg a 
+_neg = App neg  
 
 zeroNat = abss "fx" (v "x")
 
@@ -184,11 +206,11 @@ churchNat n = if n < 0 then error "nats can't be negative..." else  abss "fx" $ 
 addNat :: Term
 addNat = abss "mnfx" (App (App (v"m") (v "f")) (App (App (v "n") (v "f")) (v "x"))) 
 
-_addNat n m = App (App addNat n) m
+_addNat = app2 addNat 
 
 multNat :: Term
 multNat = abss "mnfx" (App (App (v "m") (App (v "n") (v "f"))) (v "x"))
-_multNat n m = App (App multNat n) m
+_multNat = app2 multNat 
 
 succNat = abss "nfx" (App (v "f") (App (App (v "n") (v "f")) (v "x")))
 
@@ -202,18 +224,18 @@ predNat = abs "n" (_iszero (v "n") (zeroNat)
   (App (App (v "n") (abs "y" 
     (App (App (v "y") (i)) (App (succNat) (v "y"))) )) 
     (abss "ab" zeroNat)))
-_predNat n = App predNat n
+_predNat = App predNat
 
 predNat1 = abss "nfx" (App (App (App (v "n") (abss "gh" (App (v "h") (App (v "g") (v "f"))))) (abs "u" (v "x"))) (i))
 
 minusNat = abss "nm" (App (App (v "m") predNat1 ) (v "n"))
-_minusNat n m = App (App minusNat n) m
+_minusNat = app2 minusNat 
 
 leqNat = abss "nm" (App iszero (_minusNat (v "n") (v "m")))
-_leqNat n m = App (App leqNat n) m
+_leqNat = app2 leqNat 
 
 eqNat = abss "nm" (_and (_leqNat (v "n") (v "m")) (_leqNat (v"m") (v"n")))
-_eqNat n m = App (App eqNat n) m
+_eqNat = app2 eqNat 
 
 
 --encode ordered pairs (a,b) as \z.zab
@@ -222,35 +244,38 @@ pair (x,y) = abs "z" (App (App (v "z") (x)) (y))
 
 fst = abs "p" (App (v "p")(true))
 snd = abs "p" (App (v "p")(false))
-_fst p = App fst p
-_snd p = App snd p 
+_fst = App fst 
+_snd = App snd  
 
 churchInt :: Int -> Term
 churchInt x | x >= 0 = pair (churchNat x, zeroNat)
             | otherwise = pair (zeroNat, churchNat (-x))
 
 uminus = abs "n" $ pair (App snd (v "n"), App fst (v "n"))
-_uminus n = App uminus n
+_uminus  = App uminus 
 
 addInt = abss "nm" $ pair (_addNat (_fst (v "n")) (_fst (v "m")) , _addNat (_snd (v"n")) (_snd (v"m")) )
-_addInt n m = App (App addInt n) m
+_addInt = app2 addInt 
 
 minusInt = abss "nm" $ _addInt (v "n") (_uminus (v "m"))
-_minusInt n m = App (App minusInt n) m
+_minusInt = app2 minusInt 
 
 timesInt = abss "nm" $ pair ( _addNat (_multNat (_fst n) (_fst m)) (_multNat (_snd n) (_snd m))   , _addNat (_multNat (_fst n) (_snd m)) (_multNat (_fst m) (_snd n)) ) where 
   n = v "n"
   m = v "m"
-_timesInt n m = App (App timesInt n) m
+_timesInt = app2 timesInt 
 
 --test these
 equalInt = abss "nm" $ _and (_leqInt (v "n") (v "m")) (_leqInt (v "m") (v "n")) 
+_equalInt = app2 equalInt 
 lesserInt = abss "nm" $ _neg (_leqInt (v "m") (v "n"))
-_lesserInt n m = App (App lesserInt n) m
+_lesserInt = app2 lesserInt
 leqInt = abss "nm" (_leqNat (_addNat (_fst $ v "n") (_snd $ v"m")) (_addNat (_fst $ v"m") (_snd $ v"n"))) 
-_leqInt n m = App (App leqInt n) m
+_leqInt = app2 leqInt 
 geqInt = abss "nm" $ _leqInt (v"m") (v "n")
+_geqInt = app2 geqInt
 greaterInt = abss "nm" $  _lesserInt (v "m") (v "n")
+_greaterInt = app2 greaterInt
 
 predInt = i
 succInt = i

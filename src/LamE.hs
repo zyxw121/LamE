@@ -98,7 +98,7 @@ termC (CPrim p) = termP p
 termC (CInt n) = churchInt n 
 termC (CBool True) = true
 termC (CBool False) = false
-termC (Y) = y
+termC (Y) = y 
 
 term :: (Partial Combinator) -> Term
 term = term' termC
