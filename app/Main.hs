@@ -13,5 +13,3 @@ main = do
   let prog = parseStrP source
   let res = term . partial $ act' prog prim
   print res
-       
-   

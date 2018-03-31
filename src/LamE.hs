@@ -19,7 +19,11 @@ act m@(Match x (y,e1) (s,t,e2) (z,u,e3)) env = case act x env of --hmmmm
   (TermAct (Var (Name y'))) -> act e1 (define env y (StringAct y') )
   (TermAct (App s' t')) -> act e2 (define (define env s (TermAct s')) t (TermAct t') )
   (TermAct (Abs (Name z') u')) -> act e3 (define (define env u (TermAct u')) z (StringAct z'))
-  v -> Application v [act (Func [y] e1) env, act (Func [s,t] e2) env, act (Func [z,u] e3) env]
+  v -> Application v [Closure [y] e1 env, Closure [s,t] e2 env, Closure [z,u] e3 env]
+   {- where 
+    env1 = (define env y (StringAct y') )
+    env2 = (define (define env s (TermAct s')) t (TermAct t') )
+    env3 = (define (define env u (TermAct u')) z (StringAct z')) -}
 act (If c e1 e2) env = case (act c env) of
   BoolAct b -> if b then (act e1 env) else (act e2 env)
   v -> Application v [act e1 env, act e2 env]
@@ -74,6 +78,8 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (APP) [x,y] = Application (Primitive APP) [x,y]
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim (ABS) [x,y] = Application (Primitive ABS) [x,y]
+-- add partial application
+
 
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
@@ -96,7 +102,7 @@ partial (CharAct c) = Hole (CChar c)
 partial (StringAct s) = Hole (CString s)
 partial (ListAct xs) = Hole (CList (map partial xs))
 partial (Param x) = PVar x
-partial (Closure (xs) e env) = let y:ys = reverse xs in foldr (PAbs) (PAbs y (partial $ act e env)) ys
+partial (Closure (xs) e env) = let y:ys = reverse xs in foldr (PAbs) (PAbs y (partial $ act e env)) (reverse ys) 
 partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
 partial (Application f (e:es)) = foldl (PApp) (PApp (partial f) (partial e)) $ map partial es
 partial (Primitive p) = Hole (CPrim p)
