@@ -42,6 +42,7 @@ data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
           | ChEqual
           | Head | Tail | Cons | Empty
           | StrEqual
+          | VAR | APP | ABS
           deriving (Show, Eq) 
 
 data Combinator = CPrim Prim | CInt Int | CBool Bool | CChar Char | CList [Partial Combinator] | CString  String | CTerm Term | Y deriving (Show)
@@ -77,7 +78,10 @@ prims = map (\(n,p) -> (Name n, Primitive p))
   , ("tail", Tail)
   , ("cons", Cons)
   , ("empty", Empty)
-  , ("=s", StrEqual) ]
+  , ("=s", StrEqual) 
+  , ("Var", VAR) 
+  , ("App", APP) 
+  , ("Abs", ABS) ]
 
 consts = map (\(n,a) -> (Name n, a)) 
   [("nil", ListAct []) ]

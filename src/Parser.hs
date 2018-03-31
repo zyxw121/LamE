@@ -9,7 +9,7 @@ import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 
-reserveds = words "true false if then else let val rec func in = Var App Abs match as"
+reserveds = words "true false if then else let val rec func in = match as"
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
 semi :: Parser ()
@@ -94,7 +94,7 @@ pExpr' = pConst
       <|> parens pExpr
 
 -- Constants
-pConst =  try pNum <|> pVar <|> try (pTerm >>= return . TermExp) <|>pBool <|> pChar <|> pString <|> pList
+pConst =  try pNum <|> pVar <|> pBool <|> pChar <|> pString <|> pList
 
 pTerm :: Parser Term
 pTerm = (pVarT <|> pApp <|> pAbs)

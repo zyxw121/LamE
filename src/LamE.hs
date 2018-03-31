@@ -68,6 +68,12 @@ applyPrim (Empty) [ListAct xs] = BoolAct (xs==[])
 applyPrim (Empty) [x] = Application (Primitive Empty) [x]
 applyPrim (StrEqual) [StringAct n, StringAct m] = BoolAct (n==m)
 applyPrim (StrEqual) [x,y] = Application (Primitive StrEqual) [x,y]
+applyPrim (VAR) [StringAct n] = TermAct (Var (Name n)) 
+applyPrim (VAR) [x] = Application (Primitive VAR) [x]
+applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t) 
+applyPrim (APP) [x,y] = Application (Primitive APP) [x,y]
+applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
+applyPrim (ABS) [x,y] = Application (Primitive ABS) [x,y]
 
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
@@ -78,7 +84,7 @@ elab (Val x e) env = define env x (act e env)
 elab (Rec x e) env = define env x (DefRec x e env)
 
 act' :: Program -> Env -> Action
-act' (Program ds e) env = act e (foldr elab env  ds)
+act' (Program ds e) env = act e (foldr elab env (reverse ds))
 
 --Action -> Term, in several steps
 
@@ -123,6 +129,11 @@ termP Tail = tailT
 termP Cons = cons
 termP Empty = emptyList
 termP StrEqual = equalString
+termP VAR = varT
+termP APP = appT
+termP ABS = absT
+
+
 
 termC :: Combinator -> Term
 termC (CPrim p) = termP p

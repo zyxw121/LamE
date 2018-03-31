@@ -195,6 +195,7 @@ churchTerm (Var (Name n)) = abss "abc" $ App (v"a") (churchString n)
 churchTerm (App s t) = abss "abc" $ app2 (v"b") (churchTerm s) (churchTerm t)
 churchTerm (Abs (Name n) s) = abss "abc" $ app2 (v "c") (churchString n) (churchTerm s)
 
-
-
+varT = abss "xabc" $ App (v"a") (v"x")
+appT = abss "stabc" $ app2 (v"b") (v"s") (v"t")
+absT = abss "xsabc" $ app2 (v"c") (v"x") (v"s")
 
