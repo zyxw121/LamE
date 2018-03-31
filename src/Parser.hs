@@ -122,8 +122,8 @@ pNum :: Parser Expr
 pNum = integer >>= return . NumExp 
 
 pBool :: Parser Expr
-pBool = (reserved "true" >> return (BoolExp True))
-     <|>(reserved "false" >> return (BoolExp False))
+pBool = (reserved' "true" >> return (BoolExp True))
+     <|>(reserved' "false" >> return (BoolExp False))
 
 pChar :: Parser Expr
 pChar = do

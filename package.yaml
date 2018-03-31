@@ -19,6 +19,7 @@ description:         Please see the README on Github at <https://github.com/zyxw
 
 dependencies:
 - base >= 4.7 && < 5
+- pretty-simple
 
 library:
   source-dirs: src

@@ -96,7 +96,7 @@ partial (CharAct c) = Hole (CChar c)
 partial (StringAct s) = Hole (CString s)
 partial (ListAct xs) = Hole (CList (map partial xs))
 partial (Param x) = PVar x
-partial (Closure (x:xs) e env) = foldr (PAbs) (PAbs x (partial $ act e env)) xs
+partial (Closure (xs) e env) = let y:ys = reverse xs in foldr (PAbs) (PAbs y (partial $ act e env)) ys
 partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
 partial (Application f (e:es)) = foldl (PApp) (PApp (partial f) (partial e)) $ map partial es
 partial (Primitive p) = Hole (CPrim p)
