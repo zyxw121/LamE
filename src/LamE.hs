@@ -81,7 +81,7 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (APP) [x,y] = Application (Primitive APP) [x,y]
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim (ABS) [x,y] = Application (Primitive ABS) [x,y]
-applyPrim p xs = Application p xs
+applyPrim p xs = Application (Primitive p) xs
 
 
 defargs :: Env -> [Name] -> [Action] -> Env
@@ -110,48 +110,45 @@ partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
 partial (Application f (e:es)) = foldl (PApp) (PApp (partial f) (partial e)) $ map partial es
 partial (Primitive p) = Hole (CPrim p)
 
-term' :: (a -> Term) -> Partial a -> Term
-term' f (PVar x) = Var x
-term' f (PApp s t) = App (term' f s) (term' f t)
-term' f (PAbs x s) = Abs x (term' f s)
-term' f (Hole x) = f x
+instance Church Prim where
+  church p = case p of
+    Plus -> addInt
+    Minus -> minusInt 
+    Times -> timesInt
+    Div -> divideInt 
+    Mod -> modInt
+    And -> and
+    Or -> or
+    Not -> neg
+    Equal -> equalInt
+    Lesser -> lesserInt
+    Leq -> leqInt
+    Geq -> geqInt
+    Greater -> greaterInt
+    ChEqual -> equalChar
+    Head -> headT
+    Tail -> tailT
+    Cons -> cons
+    Empty -> emptyList
+    StrEqual -> equalString
+    VAR -> varT
+    APP -> appT
+    ABS -> absT   
 
-termP :: Prim -> Term
-termP Plus = addInt
-termP Minus = minusInt 
-termP Times = timesInt
-termP Div = divideInt 
-termP Mod = modInt
-termP And = and
-termP Or = or
-termP Not = neg
-termP Equal = equalInt
-termP Lesser = lesserInt
-termP Leq = leqInt
-termP Geq = geqInt
-termP Greater = greaterInt
-termP ChEqual = equalChar
-termP Head = headT
-termP Tail = tailT
-termP Cons = cons
-termP Empty = emptyList
-termP StrEqual = equalString
-termP VAR = varT
-termP APP = appT
-termP ABS = absT
+instance Church a => Church (Partial a) where
+  church p = case p of
+    (PVar x) -> Var x
+    (PApp s t) -> App (church s) (church t)
+    (PAbs x s) -> Abs x (church s)
+    (Hole x) -> church x 
 
-
-
-termC :: Combinator -> Term
-termC (CPrim p) = termP p
-termC (CInt n) = churchInt n 
-termC (CBool True) = true
-termC (CBool False) = false
-termC (CChar c) = churchChar c
-termC (CList xs) = churchList $ map term xs
-termC (CString s) = churchString s
-termC (CTerm t) = churchTerm t
-termC (Y) = y 
-
-term :: (Partial Combinator) -> Term
-term = term' termC
+instance Church Combinator where
+  church x = case x of
+    (CPrim p) -> church p
+    (CInt n) -> church n 
+    (CBool b) -> church b
+    (CChar c) -> church c
+    (CList xs) -> church $ map church xs
+    (CString s) -> church s
+    (CTerm t) -> church t
+    (Y) -> y 
