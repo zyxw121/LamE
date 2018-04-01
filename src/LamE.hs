@@ -44,6 +44,10 @@ applyPrim (Minus) [NumAct n, NumAct m] = NumAct (n-m)
 applyPrim (Minus) [x,y] = Application (Primitive Minus) [x,y]
 applyPrim (Times) [NumAct n, NumAct m] = NumAct (n*m)
 applyPrim (Times) [x,y] = Application (Primitive Times) [x,y]
+applyPrim (Div) [NumAct n, NumAct m] = NumAct (n `div` m)
+applyPrim (Div) [x,y] = Application (Primitive Div) [x,y]
+applyPrim (Mod) [NumAct n, NumAct m] = NumAct (n `mod` m)
+applyPrim (Mod) [x,y] = Application (Primitive Mod) [x,y]
 applyPrim (And) [BoolAct n, BoolAct m] = BoolAct (n&&m)
 applyPrim (And) [x,y] = Application (Primitive And) [x,y]
 applyPrim (Or) [BoolAct n, BoolAct m] = BoolAct (n||m)
@@ -117,10 +121,8 @@ termP :: Prim -> Term
 termP Plus = addInt
 termP Minus = minusInt 
 termP Times = timesInt
--- think about these
---termP Divide = divideInt 
---termP Pred = predInt
---termP Succ = succInt
+termP Div = divideInt 
+termP Mod = modInt
 termP And = and
 termP Or = or
 termP Not = neg

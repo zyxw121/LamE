@@ -46,7 +46,7 @@ white = skipMany1 space
 
 ident :: Parser String
 ident = do
-  x <- letter <|> oneOf "+-*/<=>"
+  x <- letter <|> oneOf "+-*/<=>%"
   xs <- many $ oneOf alloweds 
   return (x:xs)
 

@@ -36,7 +36,7 @@ data Action = Param Name
             | Primitive Prim 
             deriving (Show, Eq)
 
-data Prim = Plus | Minus | Times -- | Divide | Pred | Succ
+data Prim = Plus | Minus | Times | Div | Mod 
           | And | Or | Not 
           | Equal | Lesser | Leq | Geq | Greater
           | ChEqual
@@ -65,6 +65,8 @@ prims = map (\(n,p) -> (Name n, Primitive p))
   [ ("+", Plus)
   , ("-", Minus)
   , ("*", Times)
+  , ("/", Div)
+  , ("%", Mod)
   , ("and", And)
   , ("or", Or)
   , ("not", Not)

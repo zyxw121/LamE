@@ -4,7 +4,7 @@ import Core
 import Syntax
 import Parser
 import LamE
-import Text.Pretty.Simple
+--import Text.Pretty.Simple
 
 main :: IO ()
 main = do

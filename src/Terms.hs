@@ -61,6 +61,17 @@ predNat = abs "n" (_iszero (v "n") (zeroNat)
 predNat1 = abss "nfx" (App (App (App (v "n") (abss "gh" (App (v "h") (App (v "g") (v "f"))))) (abs "u" (v "x"))) (i))
 minusNat = abss "nm" (App (App (v "m") predNat1 ) (v "n"))
 
+divmodNat = app2 y (abss "gqab" (app2 
+  (_lesserNat (v"a") (v"b") ) 
+  (pair (v"q",v"a")) 
+  (App (app2 (v"g") (App succNat (v"q")) (_minusNat (v"a") (v"b"))) (v"b")))) (zeroNat)
+_divmodNat = app2 divmodNat
+
+divmod n m = (n `div` m, n`mod` m)
+
+divmod' n m = let x = app2 divmodNat (churchNat n) (churchNat m) in let (n',m') = (_fst x, _snd x) in (unNat n', unNat m')
+
+
 _addNat = app2 addNat 
 _multNat = app2 multNat 
 _iszero n f g = App (App (App iszero n) f) g
@@ -71,6 +82,7 @@ leqNat = abss "nm" (App iszero (_minusNat (v "n") (v "m")))
 eqNat = abss "nm" (_and (_leqNat (v "n") (v "m")) (_leqNat (v"m") (v"n")))
 
 _leqNat = app2 leqNat 
+_lesserNat a b =  (_neg (_leqNat (b) (a))) 
 _eqNat = app2 eqNat 
 
 churchNat :: Int -> Term
@@ -116,6 +128,7 @@ timesInt = abss "nm" $ pair ( _addNat (_multNat (_fst n) (_fst m)) (_multNat (_s
   n = v "n"
   m = v "m"
 
+
 _uminus  = App uminus 
 _addInt = app2 addInt 
 _minusInt = app2 minusInt 
@@ -134,12 +147,34 @@ _equalInt = app2 equalInt
 _geqInt = app2 geqInt
 _greaterInt = app2 greaterInt
 
+toNat = abs "n" $ _absdiff (_fst (v "n")) (_snd (v "n"))
+_toNat = App toNat
+toInt = abs "n" $ pair (v"n", zeroNat)
+_toInt = App toInt
+
+negative = abs "n" $ _lesserNat (_fst (v"n")) (_snd (v"n"))
+_negative = App negative
+
+sign = abs "n" $ App (app2 negative (v"n") (churchInt (-1))) (churchInt (1))
+_sign = App sign
+
+--careful with negatives
+divmodInt = let z= _divmodNat (_toNat (v"n")) (_toNat (v"m")) in abss "nm" $ pair (_timesInt (_toInt (_fst z)) (_sign (v"n")) ,_timesInt (_timesInt (_sign (v"n")) (_sign (v"m"))) (_toInt (_snd z)) )
+_divmodInt = app2 divmodInt
+
+divMod' n m = let z = _divmodInt (churchInt n) (churchInt m) in (unInt . _fst $z, unInt . _snd $z)
+
+divideInt = abss "nm" $ _fst (_divmodInt (v"n") (v"m"))
+modInt = abss "nm" $ _snd (_divmodInt (v"n") (v"m"))
+
 churchInt :: Int -> Term
 churchInt x | x >= 0 = pair (churchNat x, zeroNat)
             | otherwise = pair (zeroNat, churchNat (-x))
 
 unInt :: Term -> Int
 unInt s = let (a,b) = unPair s in (unNat a) - (unNat b)
+
+
 
 -- Char, (just Nats really)
 

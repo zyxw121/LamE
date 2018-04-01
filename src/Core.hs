@@ -21,7 +21,7 @@ newtype Name = Name String deriving (Eq)
 instance Show Name where
   show (Name s) = s
 
-alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>="
+alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>=%"
 
 --prims = words "== + - * / < > <= >= pred succ and or not"
 
