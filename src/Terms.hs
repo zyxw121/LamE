@@ -3,6 +3,10 @@ import Core
 import Prelude hiding (abs, and, or, fst, snd)
 import Data.List (unfoldr)
 
+class Church a where church :: a -> Term
+                     unchurch :: Term -> a
+
+
 --Shortcuts
 abs = Abs . Name
 v = Var . Name
@@ -34,16 +38,16 @@ _and = app2 and
 _or  = app2 or 
 _neg = App neg  
 
-churchBool :: Bool -> Term
-churchBool True = true
-churchBool False = false
+instance Church Bool where
+  church True = true
+  church False = false
+  unchurch = unBool' . bnf
 
 unBool' :: Term -> Bool
 unBool' s | toDB s == true' = True
          | toDB s == false' = False
          | otherwise = error "not boolean"
 
-unBool = unBool' . bnf
 
 -- Nats
 
@@ -85,6 +89,7 @@ _leqNat = app2 leqNat
 _lesserNat a b =  (_neg (_leqNat (b) (a))) 
 _eqNat = app2 eqNat 
 
+
 churchNat :: Int -> Term
 churchNat n = if n < 0 then error "nats can't be negative..." else  abss "fx" $ foldr (App) (v "x") (take n $ repeat (v"f"))
 
@@ -119,6 +124,11 @@ _snd = App snd
 
 unPair :: Term -> (Term, Term)
 unPair s = (fromDB . bnf' . toDB . _fst $ s, fromDB . bnf' . toDB . _snd $s )
+
+instance (Church a, Church b) => Church (a,b) where 
+  church (x,y) = pair (church x, church y)
+  unchurch t = (unchurch $ _fst t, unchurch $ _snd t)
+
 -- Ints
 
 uminus = abs "n" $ pair (App snd (v "n"), App fst (v "n"))
@@ -167,6 +177,10 @@ divMod' n m = let z = _divmodInt (churchInt n) (churchInt m) in (unInt . _fst $z
 divideInt = abss "nm" $ _fst (_divmodInt (v"n") (v"m"))
 modInt = abss "nm" $ _snd (_divmodInt (v"n") (v"m"))
 
+instance Church Int where
+  church = churchInt
+  unchurch = unInt
+
 churchInt :: Int -> Term
 churchInt x | x >= 0 = pair (churchNat x, zeroNat)
             | otherwise = pair (zeroNat, churchNat (-x))
@@ -181,11 +195,10 @@ unInt s = let (a,b) = unPair s in (unNat a) - (unNat b)
 equalChar = eqNat 
 _equalChar = app2 equalChar
 
-churchChar :: Char -> Term
-churchChar = churchNat . fromEnum
 
-unChar :: Term -> Char
-unChar = toEnum . unNat 
+instance Church Char where
+  church = churchNat . fromEnum
+  unchurch = toEnum . unNat 
 
 -- Lists
 
@@ -200,12 +213,18 @@ _headT = App headT
 _tailT = App tailT
 _emptyList = App emptyList
 
-churchList :: [Term] -> Term
-churchList [] = nil
-churchList (x:xs) = _cons x (churchList xs) 
+instance (Church a) => Church [a] where
+  church = buildList . map church
+  unchurch = map unchurch . unList
+{-  church [] = nil
+  church (x:xs) = _cons (church x) (church xs)-}
+
+buildList :: [Term] -> Term
+buildList [] = nil
+buildList (x:xs) = _cons x (buildList xs) 
 
 unList :: Term -> [Term]
-unList l = if unBool (bnf . _emptyList $l) then [] else (_headT l):(unList (_tailT l))
+unList l = if unchurch (bnf . _emptyList $l) then [] else (_headT l):(unList (_tailT l))
 
 -- Strings (lists of chars)
 
@@ -219,16 +238,17 @@ equalString = App y (abss "exy" ( app2 (_emptyList (v"x"))
 
 _equalString = app2 equalString
 
-churchString :: String -> Term
-churchString = churchList . map churchChar
-
-unString = map unChar . unList
 
 -- Terms
 
-churchTerm (Var (Name n)) = abss "abc" $ App (v"a") (churchString n)
+instance Church Term where
+  church = churchTerm
+  unchurch = undefined
+
+
+churchTerm (Var (Name n)) = abss "abc" $ App (v"a") (church n)
 churchTerm (App s t) = abss "abc" $ app2 (v"b") (churchTerm s) (churchTerm t)
-churchTerm (Abs (Name n) s) = abss "abc" $ app2 (v "c") (churchString n) (churchTerm s)
+churchTerm (Abs (Name n) s) = abss "abc" $ app2 (v "c") (church n) (churchTerm s)
 
 varT = abss "xabc" $ App (v"a") (v"x")
 appT = abss "stabc" $ app2 (v"b") (v"s") (v"t")
