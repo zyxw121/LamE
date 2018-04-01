@@ -96,28 +96,6 @@ pExpr' = pConst
 -- Constants
 pConst =  try pNum <|> pVar <|> pBool <|> pChar <|> pString <|> pList
 
-pTerm :: Parser Term
-pTerm = (pVarT <|> pApp <|> pAbs)
-
-pVarT = do
-  reserved "Var"
-  x <- string
-  return . Var . Name $ x
-
-pApp = do
-  reserved "App"
-  s <- parens pTerm
-  white
-  t <- parens pTerm 
-  return $ App s t
-
-pAbs = do
-  reserved "Abs"
-  x <- string
-  white
-  s <- parens pTerm
-  return $ Abs (Name x) s
-
 pNum :: Parser Expr
 pNum = integer >>= return . NumExp 
 
