@@ -36,7 +36,6 @@ apply (Closure xs e env) as = act e (defargs env xs as)
 apply (Primitive p) as = applyPrim p as 
 apply a as = Application a as
 
---simplify with GADTs
 applyPrim :: Prim -> [Action] -> Action
 applyPrim (Plus) [NumAct n, NumAct m] = NumAct (n+m)
 applyPrim (Plus) [x,y] = Application (Primitive Plus) [x,y]
@@ -82,7 +81,7 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (APP) [x,y] = Application (Primitive APP) [x,y]
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim (ABS) [x,y] = Application (Primitive ABS) [x,y]
--- add partial application
+applyPrim p xs = Application p xs
 
 
 defargs :: Env -> [Name] -> [Action] -> Env
