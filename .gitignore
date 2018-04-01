@@ -2,4 +2,5 @@
 misc/
 *.cabal
 *~
-*.lm
+*.swp
+*.swo
