@@ -81,7 +81,7 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (APP) [x,y] = Application (Primitive APP) [x,y]
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim (ABS) [x,y] = Application (Primitive ABS) [x,y]
-applyPrim p xs = Application p xs
+applyPrim p xs = Application (Primitive p) xs
 
 
 defargs :: Env -> [Name] -> [Action] -> Env
