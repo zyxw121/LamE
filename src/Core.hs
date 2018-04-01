@@ -2,11 +2,12 @@
 module Core where
 import Control.Applicative
 import Prelude hiding (and, or, abs, pred, succ, fst, snd)
+import Data.List (unfoldr)
 
 --data Name = Name {name :: Char, num :: Int }  deriving (Eq)
-data Term = Var Name | Abs Name Term | App Term Term
+data Term = Var Name | Abs Name Term | App Term Term deriving (Eq)
 
-data DBTerm = DBVar Int | DBAbs DBTerm | DBApp DBTerm DBTerm
+data DBTerm = DBVar Int | DBAbs DBTerm | DBApp DBTerm DBTerm deriving (Eq)
 
 -- 0 <-> a_0, 1 <-> b_0, ... etc
 --instance Enum Name where 
@@ -20,9 +21,9 @@ newtype Name = Name String deriving (Eq)
 instance Show Name where
   show (Name s) = s
 
-alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>="
+alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>=%"
 
-prims = words "== + - * / < > <= >= pred succ and or not"
+--prims = words "== + - * / < > <= >= pred succ and or not"
 
 allowed' c = c `elem` alloweds
 
@@ -115,6 +116,31 @@ instance Show DBTerm where
 
 
 -- Reduction
+
+sub t x (Var y) = if x==y then t else (Var y)
+sub t x (App u v) = App (sub t x u) (sub t x v)
+sub t x (Abs y s) = let ts = frees t in
+  if y==x || y `elem` ts then let z = news (ts ++ frees s) in Abs z $ sub t x (sub (Var z) y s) 
+  else Abs y (sub t x s)
+
+bred :: Term -> Maybe Term
+bred (App (Abs x s) v) =  Just $ sub v x s
+bred _ = Nothing
+
+--be careful with this one
+lred :: Term -> Maybe Term
+lred (Var x) = Nothing
+lred u@(App s t) = bred u <|> (lred s>>= (\x -> Just $ App x t))  <|> (lred t >>= Just . App s)
+lred (Abs x s) = lred s >>= Just . Abs x
+
+--This is still buggy
+--bnf :: Term -> Term
+--bnf t = case lred t of
+--  Nothing -> t
+--  Just t' -> bnf t'
+
+bnf = fromDB . bnf' . toDB
+
 --shift' n m t increments all vars in t that are > than m by n
 shift' :: Int -> Int -> DBTerm -> DBTerm
 shift' n m (DBVar k) = if k >= m then (DBVar $ n+k) else (DBVar k)
@@ -149,112 +175,6 @@ bnf' :: DBTerm -> DBTerm
 bnf' t = case lred' t of
   Nothing -> t
   Just t' -> bnf' t'
-
---Some terms
-abs = Abs . Name
-v= Var . Name
-
-abss :: String -> Term -> Term
-abss [x] t = abs (x:[]) t
-abss (x:y:xs) t = abs (x:[]) $ abss (y:xs) t 
-
-i = abs "x" (v"x")
-s = abss "abc" (App (App (v "a") (v "c")) (App (v "b") (v "c")))
-k = abss "xy" (v "y")
-
-
-
-y = abs "f" (App x x)
-  where x = abs "x" (App (v "f") (App (v"x") (v"x"))) 
-
-true = abs "a" (abs "b" $ v"a" )
-false = abs "a" (abs "b" $ v"b" )
-
-and = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
-_and a b = App (App and a) b
-or = abss "xyab" (App (App (v"x") (App (App (v"y") (v"a")) (v"b"))) (v"b")) 
-neg = abss "xab" (App (App (v "x") (v"b"))(v"a"))
-_neg a = App neg a 
-
-zeroNat = abss "fx" (v "x")
-
-churchNat :: Int -> Term
-churchNat n = if n < 0 then error "nats can't be negative..." else  abss "fx" $ foldr (App) (v "x") (take n $ repeat (v"f"))
-
-addNat :: Term
-addNat = abss "mnfx" (App (App (v"m") (v "f")) (App (App (v "n") (v "f")) (v "x"))) 
-
-_addNat n m = App (App addNat n) m
-
-multNat :: Term
-multNat = abss "mnfx" (App (App (v "m") (App (v "n") (v "f"))) (v "x"))
-_multNat n m = App (App multNat n) m
-
-succNat = abss "nfx" (App (v "f") (App (App (v "n") (v "f")) (v "x")))
-
-iszero = abs "n" (App (App (v "n") (abs "x" false)) true)
-
-_iszero :: Term -> Term -> Term -> Term
-_iszero n f g = App (App (App iszero n) f) g
-
-
-predNat = abs "n" (_iszero (v "n") (zeroNat) 
-  (App (App (v "n") (abs "y" 
-    (App (App (v "y") (i)) (App (succNat) (v "y"))) )) 
-    (abss "ab" zeroNat)))
-_predNat n = App predNat n
-
-predNat1 = abss "nfx" (App (App (App (v "n") (abss "gh" (App (v "h") (App (v "g") (v "f"))))) (abs "u" (v "x"))) (i))
-
-minusNat = abss "nm" (App (App (v "m") predNat1 ) (v "n"))
-_minusNat n m = App (App minusNat n) m
-
-leqNat = abss "nm" (App iszero (_minusNat (v "n") (v "m")))
-_leqNat n m = App (App leqNat n) m
-
-eqNat = abss "nm" (_and (_leqNat (v "n") (v "m")) (_leqNat (v"m") (v"n")))
-_eqNat n m = App (App eqNat n) m
-
-
---encode ordered pairs (a,b) as \z.zab
-pair :: (Term, Term) -> Term 
-pair (x,y) = abs "z" (App (App (v "z") (x)) (y))
-
-fst = abs "p" (App (v "p")(true))
-snd = abs "p" (App (v "p")(false))
-_fst p = App fst p
-_snd p = App snd p 
-
-churchInt :: Int -> Term
-churchInt x | x >= 0 = pair (churchNat x, zeroNat)
-            | otherwise = pair (zeroNat, churchNat (-x))
-
-uminus = abs "n" $ pair (App snd (v "n"), App fst (v "n"))
-_uminus n = App uminus n
-
-addInt = abss "nm" $ pair (_addNat (_fst (v "n")) (_fst (v "m")) , _addNat (_snd (v"n")) (_snd (v"m")) )
-_addInt n m = App (App addInt n) m
-
-minusInt = abss "nm" $ _addInt (v "n") (_uminus (v "m"))
-_minusInt n m = App (App minusInt n) m
-
-timesInt = abss "nm" $ pair ( _addNat (_multNat (_fst n) (_fst m)) (_multNat (_snd n) (_snd m))   , _addNat (_multNat (_fst n) (_snd m)) (_multNat (_fst m) (_snd n)) ) where 
-  n = v "n"
-  m = v "m"
-_timesInt n m = App (App timesInt n) m
-
---test these
-equalInt = abss "nm" $ _and (_leqInt (v "n") (v "m")) (_leqInt (v "m") (v "n")) 
-lesserInt = abss "nm" $ _neg (_leqInt (v "m") (v "n"))
-_lesserInt n m = App (App lesserInt n) m
-leqInt = abss "nm" (_leqNat (_addNat (_fst $ v "n") (_snd $ v"m")) (_addNat (_fst $ v"m") (_snd $ v"n"))) 
-_leqInt n m = App (App leqInt n) m
-geqInt = abss "nm" $ _leqInt (v"m") (v "n")
-greaterInt = abss "nm" $  _lesserInt (v "m") (v "n")
-
-predInt = i
-succInt = i
-divideInt = i
 
 -- Some DB terms
 

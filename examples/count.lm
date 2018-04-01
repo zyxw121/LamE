@@ -1,0 +1,7 @@
+rec count = func (t) (match t as
+  (Var x) (1)
+  (App u v) (+ (count u) (count v))
+  (Abs x s) (count s));
+val i = Abs "x" (Var "x");
+count i
+

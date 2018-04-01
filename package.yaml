@@ -1,5 +1,5 @@
 name:                LamE
-version:             0.1.0.0
+version:             1.0.0.0
 github:              "zyxw121/LamE"
 license:             BSD3
 author:              "Daniel Mroz"
@@ -19,7 +19,6 @@ description:         Please see the README on Github at <https://github.com/zyxw
 
 dependencies:
 - base >= 4.7 && < 5
-- parsec
 
 library:
   source-dirs: src
@@ -28,6 +27,7 @@ library:
   - Syntax
   - Parser
   - LamE
+  - Terms
   other-modules:
   dependencies:
   - parsec 
@@ -53,3 +53,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - LamE
+    - hspec
+    - QuickCheck
+    - parsec

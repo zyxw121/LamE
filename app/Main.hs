@@ -4,6 +4,7 @@ import Core
 import Syntax
 import Parser
 import LamE
+--import Text.Pretty.Simple
 
 main :: IO ()
 main = do
@@ -12,5 +13,3 @@ main = do
   let prog = parseStrP source
   let res = term . partial $ act' prog prim
   print res
-       
-   
