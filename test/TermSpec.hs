@@ -71,3 +71,4 @@ spec = do
     smaller 5 25 $ it "converts" $ property $ 
       \s -> (unchurch . church) s == (s :: String) 
 
+
