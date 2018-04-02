@@ -3,8 +3,8 @@ import Prelude hiding (pred, succ, and, or)
 import Core
 import Syntax
 import Terms
+import Env
 
---Env -> Action
 act :: Expr -> Env -> Action
 act (VarExp n) env = case find env n of
   Just v -> v
@@ -15,15 +15,11 @@ act (NumExp n) env = NumAct n
 act (CharExp c) env = CharAct c
 act (StringExp s) env = StringAct s
 act (ListExp xs) env = ListAct (map (\e -> act e env) xs)
-act m@(Match x (y,e1) (s,t,e2) (z,u,e3)) env = case act x env of --hmmmm
+act m@(Match x (y,e1) (s,t,e2) (z,u,e3)) env = case act x env of 
   (TermAct (Var (Name y'))) -> act e1 (define env y (StringAct y') )
   (TermAct (App s' t')) -> act e2 (define (define env s (TermAct s')) t (TermAct t') )
   (TermAct (Abs (Name z') u')) -> act e3 (define (define env u (TermAct u')) z (StringAct z'))
   v -> Application v [Closure [y] e1 env, Closure [s,t] e2 env, Closure [z,u] e3 env]
-   {- where 
-    env1 = (define env y (StringAct y') )
-    env2 = (define (define env s (TermAct s')) t (TermAct t') )
-    env3 = (define (define env u (TermAct u')) z (StringAct z')) -}
 act (If c e1 e2) env = case (act c env) of
   BoolAct b -> if b then (act e1 env) else (act e2 env)
   v -> Application v [act e1 env, act e2 env]
@@ -36,7 +32,7 @@ apply (Closure xs e env) as = act e (defargs env xs as)
 apply (Primitive p) as = applyPrim p as 
 apply a as = Application a as
 
---not ideal, + 'a' 'b' _should_ result in an error
+-- Currently allows things like (+ 'a' 'b'), should this result in an error?
 applyPrim :: Prim -> [Action] -> Action
 applyPrim (Plus) [NumAct n, NumAct m] = NumAct (n+m)
 applyPrim (Minus) [NumAct n, NumAct m] = NumAct (n-m)
@@ -62,10 +58,6 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim p xs = Application (Primitive p) xs
 
-defargs :: Env -> [Name] -> [Action] -> Env
-defargs env [] [] = env
-defargs env (x:xs) (a:as) = define (defargs env xs as) x a
-
 elab :: Defn -> Env -> Env
 elab (Val x e) env = define env x (act e env)
 elab (Rec x e) env = define env x (DefRec x e env)
@@ -74,7 +66,6 @@ elab (Rec x e) env = define env x (DefRec x e env)
 act' :: Program -> Env -> Action
 act' (Program ds e) env = act e (foldr elab env (reverse ds))
 
---Action -> Term, in several steps
 partial :: Action -> Partial Combinator 
 partial (TermAct t) = Hole (CTerm t)
 partial (NumAct n) = Hole (CInt n)
@@ -129,4 +120,34 @@ instance Church Combinator where
     (CList xs) -> church $ map church xs
     (CString s) -> church s
     (CTerm t) -> church t
-    (Y) -> y 
+    (Y) -> y
+ 
+prims :: Env
+prims = map (\(n,p) -> (Name n, Primitive p)) 
+  [ ("+", Plus)
+  , ("-", Minus)
+  , ("*", Times)
+  , ("/", Div)
+  , ("%", Mod)
+  , ("and", And)
+  , ("or", Or)
+  , ("not", Not)
+  , ("==", Equal)
+  , ("<", Lesser)
+  , ("<=", Leq)
+  , (">=", Geq)
+  , (">", Greater)
+  , ("=c", ChEqual)
+  , ("head", Head)
+  , ("tail", Tail)
+  , ("cons", Cons)
+  , ("empty", Empty)
+  , ("=s", StrEqual) 
+  , ("Var", VAR) 
+  , ("App", APP) 
+  , ("Abs", ABS) ]
+
+consts = map (\(n,a) -> (Name n, a)) 
+  [("nil", ListAct []) ]
+
+prim = prims ++ consts

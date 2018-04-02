@@ -11,14 +11,13 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 
 alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>=%"
 reserveds = words "true false if then else let val rec func in = match as"
-rops = words "+ - * / < > and or not =" --get rid of these maybe?
 
+--Helper funcs
 semi :: Parser ()
 semi = do
   char ';'
   skipMany white
 
---Helper funcs
 zeroNumber :: Parser Int
 zeroNumber  = do
   _ <- char '0'
@@ -218,11 +217,6 @@ pLet = do
   e <- pExpr
   return $ Let d e
   
-parseExpr :: String -> Expr
-parseExpr s = case parse (pExpr <* eof) "" s of
-  Left e -> error $ show e
-  Right r -> r
-
 pDefn :: Parser Defn
 pDefn = pVal <|> pRec
 
@@ -245,8 +239,15 @@ pRec = do
 pProgram :: Parser Program
 pProgram = do
   defs <- many (pDefn >>= (\x -> semi >> return x)) --list of ';' seperated defns
-  e <- pExpr
+  e <- pExpr <* eof
   return $ Program defs e
+
+-- Parsing strings
+parseExpr :: String -> Expr
+parseExpr s = case parse (pExpr <* eof) "" s of
+  Left e -> error $ show e
+  Right r -> r
+
 
 parseStrP :: String -> Program
 parseStrP s = case parse pProgram "" s of

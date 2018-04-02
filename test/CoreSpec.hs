@@ -10,7 +10,6 @@ import Test.QuickCheck
 import Text.ParserCombinators.Parsec
 import Test.Hspec.QuickCheck (modifyMaxSize, modifyMaxSuccess)
 
-
 smaller a b c= modifyMaxSize (const a) $ modifyMaxSuccess (const b) $ c
 
 instance Arbitrary Name where
@@ -58,7 +57,7 @@ spec :: Spec
 spec = do
   describe "news" $ do
     smaller 1000 100 $ it "works" $ property $
-      \xs -> not (news xs `elem` xs) 
+      \xs -> not (fresh' xs `elem` xs) 
 
   describe "substitution" $ do
     smaller 100 1000 $ it "works" $ property $ 

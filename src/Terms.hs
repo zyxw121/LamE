@@ -6,7 +6,6 @@ import Data.List (unfoldr)
 class Church a where church :: a -> Term
                      unchurch :: Term -> a
 
-
 --Shortcuts
 abs = Abs . Name
 v = Var . Name
@@ -101,10 +100,6 @@ unNat' (Abs f (Abs x t)) = let ns =  unfoldr unApp t in if foldr (&&) (True) .  
 unNat' _ = error "not Nat"
 
 unNat = unNat' . bnf
---unNat' :: Term -> Int -> Int
---unNat' s n | toDB s == bnf' (churchNat' n) = n
---           | otherwise = unNat' s (n+1)
---unNat s = unNat' s 0
 
 absdiff = abss "nm" $ _addNat (_minusNat (v "n") (v"m")) (_minusNat (v"m") (v"n"))
 _absdiff = app2 absdiff
@@ -188,12 +183,10 @@ unInt :: Term -> Int
 unInt s = let (a,b) = unPair s in (unNat a) - (unNat b)
 
 
-
 -- Char, (just Nats really)
 
 equalChar = eqNat 
 _equalChar = app2 equalChar
-
 
 instance Church Char where
   church = churchNat . fromEnum
@@ -215,8 +208,6 @@ _emptyList = App emptyList
 instance (Church a) => Church [a] where
   church = buildList . map church
   unchurch = map unchurch . unList
-{-  church [] = nil
-  church (x:xs) = _cons (church x) (church xs)-}
 
 buildList :: [Term] -> Term
 buildList [] = nil
