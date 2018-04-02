@@ -9,6 +9,7 @@ import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 
+alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>=%"
 reserveds = words "true false if then else let val rec func in = match as"
 rops = words "+ - * / < > and or not =" --get rid of these maybe?
 

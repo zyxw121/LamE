@@ -44,10 +44,9 @@ instance Church Bool where
   unchurch = unBool' . bnf
 
 unBool' :: Term -> Bool
-unBool' s | toDB s == true' = True
-         | toDB s == false' = False
-         | otherwise = error "not boolean"
-
+unBool' s | bnf s == bnf true = True
+          | bnf s == bnf false = False
+          | otherwise = error "not boolean"
 
 -- Nats
 

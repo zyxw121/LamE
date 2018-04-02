@@ -62,7 +62,6 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim p xs = Application (Primitive p) xs
 
-
 defargs :: Env -> [Name] -> [Action] -> Env
 defargs env [] [] = env
 defargs env (x:xs) (a:as) = define (defargs env xs as) x a
