@@ -146,7 +146,7 @@ unabs t@(App p q) is = Just (t, is)
 unabs (Abs x s) is =  unabs s (x:is) 
 unabs _ is = Nothing
 
-unapp :: Term -> [Term] -> Maybe (Ident, Term, Term, [Term])
+unapp :: Term -> [Term] -> Maybe (Name, Term, Term, [Term])
 unapp (App (Abs x t) u) ts = Just (x, t, u, ts) 
 unapp (App p q) ts = unapp p (q:ts) 
 unapp _ ts = Nothing
