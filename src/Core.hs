@@ -125,6 +125,38 @@ sub (Abs y s) t x = let ts = frees t in
   if y==x || y `elem` ts then let z = news (ts ++ frees s ++ [x]) in Abs z $ sub (sub s (Var z) y) t x 
   else Abs y (sub s t x)
 
+hred :: Term -> Maybe Term
+hred p = do
+  (app, is) <- unabs p []
+  (x,t,u,ts) <- unapp app []
+  let h = sub u x t
+      h' = reapp h ts
+      h'' = reabs h' is
+  return h''
+
+--get rid of reverse
+reapp :: Term -> [Term] -> Term
+reapp t = foldl App t
+
+reabs :: Term -> [Ident] -> Term
+reabs t = foldr Abs t
+
+unabs :: Term -> [Ident] -> Maybe (Term, [Ident])
+unabs t@(App p q) is = Just (t, is)
+unabs (Abs x s) is =  unabs s (x:is) 
+unabs _ is = Nothing
+
+unapp :: Term -> [Term] -> Maybe (Ident, Term, Term, [Term])
+unapp (App (Abs x t) u) ts = Just (x, t, u, ts) 
+unapp (App p q) ts = unapp p (q:ts) 
+unapp _ ts = Nothing
+
+hnf :: Term -> Term
+hnf t = case hred t of 
+  Nothing -> t
+  Just t' -> hnf t'
+
+
 bred :: Term -> Maybe Term
 bred (App (Abs x s) v) =  Just $ sub s v x
 bred _ = Nothing
@@ -135,13 +167,14 @@ lred (Var x) = Nothing
 lred u@(App s t) = bred u <|> (lred s>>= (\x -> Just $ App x t))  <|> (lred t >>= Just . App s)
 lred (Abs x s) = lred s >>= Just . Abs x
 
---This is still buggy
-bnf :: Term -> Term
-bnf t = case lred t of
+--Very slow
+bnf1 :: Term -> Term
+bnf1 t = case lred t of
   Nothing -> t
-  Just t' -> bnf t'
+  Just t' -> bnf1 t'
 
---bnf = fromDB . bnf' . toDB
+--use this instead
+bnf = fromDB . bnf' . toDB
 
 --shift' n m t increments all vars in t that are > than m by n
 shift' :: Int -> Int -> DBTerm -> DBTerm
