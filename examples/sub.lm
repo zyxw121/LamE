@@ -2,5 +2,5 @@ rec sub = func (t x s) (match s as
   (Var a) (if =s x a then t else s)
   (App a b) (App (sub t x a) (sub t x b))
   (Abs a b) (sub t x b));
-sub
+sub (Var "!") "a" (Var "a")
 

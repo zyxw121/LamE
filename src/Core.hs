@@ -117,14 +117,16 @@ instance Show DBTerm where
 
 -- Reduction
 
-sub t x (Var y) = if x==y then t else (Var y)
-sub t x (App u v) = App (sub t x u) (sub t x v)
-sub t x (Abs y s) = let ts = frees t in
-  if y==x || y `elem` ts then let z = news (ts ++ frees s) in Abs z $ sub t x (sub (Var z) y s) 
-  else Abs y (sub t x s)
+
+
+sub (Var y) t x  = if x==y then t else (Var y)
+sub (App u v) t x  = App (sub u t x) (sub v t x)
+sub (Abs y s) t x = let ts = frees t in
+  if y==x || y `elem` ts then let z = news (ts ++ frees s ++ [x]) in Abs z $ sub (sub s (Var z) y) t x 
+  else Abs y (sub s t x)
 
 bred :: Term -> Maybe Term
-bred (App (Abs x s) v) =  Just $ sub v x s
+bred (App (Abs x s) v) =  Just $ sub s v x
 bred _ = Nothing
 
 --be careful with this one
@@ -134,12 +136,12 @@ lred u@(App s t) = bred u <|> (lred s>>= (\x -> Just $ App x t))  <|> (lred t >>
 lred (Abs x s) = lred s >>= Just . Abs x
 
 --This is still buggy
---bnf :: Term -> Term
---bnf t = case lred t of
---  Nothing -> t
---  Just t' -> bnf t'
+bnf :: Term -> Term
+bnf t = case lred t of
+  Nothing -> t
+  Just t' -> bnf t'
 
-bnf = fromDB . bnf' . toDB
+--bnf = fromDB . bnf' . toDB
 
 --shift' n m t increments all vars in t that are > than m by n
 shift' :: Int -> Int -> DBTerm -> DBTerm

@@ -69,5 +69,5 @@ spec = do
       \x xs -> (unchurch . bnf $ _equalInt (church (x:: Int)) (_headT (_cons (church (x::Int)) (church (xs::Int))) )) && ( unchurch . bnf $ _equalInt (church (xs::Int)) (_tailT (_cons (church (x::Int))(church (xs::Int))))     )
   describe "Strings" $ do
     smaller 5 25 $ it "converts" $ property $ 
-      \s -> (unchurch . church) s == (s :: String)
+      \s -> (unchurch . church) s == (s :: String) 
 
