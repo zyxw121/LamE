@@ -29,6 +29,7 @@ library:
   - LamE
   - Terms
   other-modules:
+  - Env
   dependencies:
   - parsec 
 

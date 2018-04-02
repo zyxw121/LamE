@@ -1,5 +1,6 @@
 module Syntax where
 import Core
+import Env
 
 type Ident = String
 
@@ -23,6 +24,8 @@ data Defn  = Val Name Expr
          
 data Program  = Program [Defn] Expr deriving (Eq, Show)
 
+type Env = Environment Action
+
 data Action = Param Name
             | TermAct Term 
             | CharAct Char
@@ -45,47 +48,18 @@ data Prim = Plus | Minus | Times | Div | Mod
           | VAR | APP | ABS
           deriving (Show, Eq) 
 
-data Combinator = CPrim Prim | CInt Int | CBool Bool | CChar Char | CList [Partial Combinator] | CString  String | CTerm Term | Y deriving (Show)
+data Combinator = CPrim Prim 
+                | CInt Int 
+                | CBool Bool 
+                | CChar Char 
+                | CList [Partial Combinator] 
+                | CString  String 
+                | CTerm Term 
+                | Y 
+                deriving (Show)
 
-data Partial a = PVar Name | PAbs Name (Partial a) | PApp (Partial a) (Partial a) | Hole a deriving (Show)
-
-type Environment a =  [(Name,a)] -- Mapping names to as
-type Env = Environment Action
-
-find :: Environment a -> Name -> Maybe a
-find env x = case (filter (\(a,b) -> a==x) env) of
-  [] -> Nothing
-  ((a,b):xs) -> Just b 
-
-define :: Environment a -> Name -> a -> Environment a
-define env x v = (x,v):env
-
-prims :: Env
-prims = map (\(n,p) -> (Name n, Primitive p)) 
-  [ ("+", Plus)
-  , ("-", Minus)
-  , ("*", Times)
-  , ("/", Div)
-  , ("%", Mod)
-  , ("and", And)
-  , ("or", Or)
-  , ("not", Not)
-  , ("==", Equal)
-  , ("<", Lesser)
-  , ("<=", Leq)
-  , (">=", Geq)
-  , (">", Greater)
-  , ("=c", ChEqual)
-  , ("head", Head)
-  , ("tail", Tail)
-  , ("cons", Cons)
-  , ("empty", Empty)
-  , ("=s", StrEqual) 
-  , ("Var", VAR) 
-  , ("App", APP) 
-  , ("Abs", ABS) ]
-
-consts = map (\(n,a) -> (Name n, a)) 
-  [("nil", ListAct []) ]
-
-prim = prims ++ consts
+data Partial a = PVar Name 
+                | PAbs Name (Partial a) 
+                | PApp (Partial a) (Partial a) 
+                | Hole a 
+                deriving (Show)

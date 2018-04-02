@@ -14,3 +14,4 @@ main = do
   let prog = parseStrP source
   let res = church . partial $ act' prog prim
   print res
+  print $ bnf res

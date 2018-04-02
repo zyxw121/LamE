@@ -129,7 +129,7 @@ func (x y z) (if x then + y z else - y z)
 
 
 ### Function application
-Function application is Haskell style, however partial application is not yet supported.
+Function application is Haskell style, however partial application is not supported.
 Note that infix expressions aren't supported yet. So write `+ 1 2` rather than `1 + 2`.
 
 ### Let statements
