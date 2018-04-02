@@ -138,10 +138,10 @@ hred p = do
 reapp :: Term -> [Term] -> Term
 reapp t = foldl App t
 
-reabs :: Term -> [Ident] -> Term
+reabs :: Term -> [Name] -> Term
 reabs t = foldr Abs t
 
-unabs :: Term -> [Ident] -> Maybe (Term, [Ident])
+unabs :: Term -> [Name] -> Maybe (Term, [Name])
 unabs t@(App p q) is = Just (t, is)
 unabs (Abs x s) is =  unabs s (x:is) 
 unabs _ is = Nothing
