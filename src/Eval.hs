@@ -7,50 +7,32 @@ import Terms
 import Env
 import Data.Functor.Identity
 
-eval :: Monad m => Expr -> EnvT Action m Action
-eval (VarExp n) = findM n >>= \case 
-  (Just v) -> return v
-  (Nothing) -> return $ Param n
-eval (TermExp t) = return $ TermAct t
-eval (BoolExp b) = return $ BoolAct b
-eval (NumExp n) = return $ NumAct n
-eval (CharExp c) = return $ CharAct c
-eval (StringExp s) = return $ StringAct s
-eval (ListExp xs) = do
-  es <- sequence $ map eval xs
-  return $ ListAct es
-eval m@(Match x (y,e1) (s,t,e2) (z,u,e3)) = eval x >>= \case 
-  (TermAct (Var (Name y'))) -> (defineM y (StringAct y') ) >> eval e1
-  (TermAct (App s' t')) -> defsM [(s, TermAct s'),(t, TermAct t')] >> eval e2
-  (TermAct (Abs (Name z') u')) -> defsM [( u,TermAct u'), (z,StringAct z')] >> eval e3
-  v -> envM >>= \env -> return $ Application v [Closure [y] e1 env, Closure [s,t] e2 env, Closure [z,u] e3 env]
-eval (If c e1 e2) = eval c >>= \case 
-  BoolAct b -> if b then eval e1 else eval e2 
-  v -> eval e1 >>= \a1 -> eval e2 >>= \a2 -> return $ Application v [a1,a2]
-eval (Func xs e) = envM >>= \env -> return $ Closure xs e env
-eval (Apply e es) = do
-  a <- eval e
-  as <- sequence $ map eval es
-  applyM a as
-eval (Let d e) = elabM d >> eval e 
-
-elabM :: Monad m => Defn -> EnvT Action m () 
-elabM (Val x e) = eval e >>= defineM x
-elabM (Rec x e) = envM >>= \env -> defineM x (DefRec x e env)
-
-elabsM :: Monad m => [Defn] -> EnvT Action m ()
-elabsM = sequence_ . map elabM
-
 act :: Expr -> Env -> Action
-act = runId eval 
+act (VarExp n) env = case find env n of
+  Just v -> v
+  Nothing -> Param n
+act (TermExp t) env = TermAct t
+act (BoolExp b) env = BoolAct b
+act (NumExp n) env = NumAct n
+act (CharExp c) env = CharAct c
+act (StringExp s) env = StringAct s
+act (ListExp xs) env = ListAct (map (\e -> act e env) xs)
+act m@(Match x (y,e1) (s,t,e2) (z,u,e3)) env = case act x env of 
+  (TermAct (Var (Name y'))) -> act e1 (define env y (StringAct y') )
+  (TermAct (App s' t')) -> act e2 (define (define env s (TermAct s')) t (TermAct t') )
+  (TermAct (Abs (Name z') u')) -> act e3 (define (define env u (TermAct u')) z (StringAct z'))
+  v -> Application v [Closure [y] e1 env, Closure [s,t] e2 env, Closure [z,u] e3 env]
+act (If c e1 e2) env = case (act c env) of
+  BoolAct b -> if b then (act e1 env) else (act e2 env)
+  v -> Application v [act e1 env, act e2 env]
+act (Func xs e) env = Closure xs e env
+act (Apply e es) env = apply (act e env) (map (\e -> act e env) es)
+act (Let d e) env = act e (elab d env)
 
-runId :: (a -> EnvT b Identity c) -> a -> Environment b -> c
-runId f a =  Prelude.fst . runIdentity . runEnvT (f a)
-
-applyM :: Monad m => Action -> [Action] -> EnvT Action m Action
-applyM (Closure xs e env) as = inM env >> defsM (zip xs as) >> eval e 
-applyM (Primitive p) as = return $ applyPrim p as 
-applyM a as = return $ Application a as
+apply :: Action -> [Action] -> Action
+apply (Closure xs e env) as = act e (defargs env xs as)
+apply (Primitive p) as = applyPrim p as 
+apply a as = Application a as
 
 -- Currently allows things like (+ 'a' 'b'), should this result in an error?
 applyPrim :: Prim -> [Action] -> Action
@@ -78,12 +60,20 @@ applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t)
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
 applyPrim p xs = Application (Primitive p) xs
 
-evalP :: Monad m => Program -> EnvT Action m Action
-evalP (Program ds e) = elabsM ds >> eval e
+elab :: Defn -> Env -> Env
+elab (Val x e) env = define env x (act e env)
+elab (Rec x e) env = define env x (DefRec x e env)
+
+elabM :: Monad m => Defn -> EnvT Action m ()
+elabM (Val x e) = envM >>= \env -> defineM x (act e env)
+elabM (Rec x e) = envM >>= \env -> defineM x (DefRec x e env)
+
+eval :: Monad m => Expr -> EnvT Action m Action
+eval e = envM >>= \env -> return $ act e env
 
 -- this elaborates the environment sequentially
 act' :: Program -> Env -> Action
-act' = runId evalP 
+act' (Program ds e) env = act e (foldr elab env (reverse ds))
 
 partial :: Action -> Partial Combinator 
 partial (TermAct t) = Hole (CTerm t)
@@ -93,8 +83,7 @@ partial (CharAct c) = Hole (CChar c)
 partial (StringAct s) = Hole (CString s)
 partial (ListAct xs) = Hole (CList (map partial xs))
 partial (Param x) = PVar x
-partial (Closure (xs) e env) = let y:ys = reverse xs in 
-  foldr (PAbs) (PAbs y (partial $ runId eval e env)) (reverse ys) 
+partial (Closure (xs) e env) = let y:ys = reverse xs in foldr (PAbs) (PAbs y (partial $ act e env)) (reverse ys) 
 partial (DefRec x e env) = PApp (Hole Y) (partial $ Closure [x] e env)
 partial (Application f (e:es)) = foldl (PApp) (PApp (partial f) (partial e)) $ map partial es
 partial (Primitive p) = Hole (CPrim p)
