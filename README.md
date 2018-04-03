@@ -10,22 +10,31 @@ Build with [Stack](https://docs.haskellstack.org/en/stable/README/).
   $ stack setup && stack build  
 ```
 
-This builds the executable `LamE` in the `.stack-work` folder. You can move it somewhere else and call it directly, or call it from Stack.
+This builds the executable `LamE` in the `.stack-work` folder. You can move it somewhere else and call it directly, or call it from Stack with `stack exec LamE [args]`.
+
+The executable `LamE` by default takes one LamE source program as an argument and prints the result to standard output.
 
 ```
-  $ LamE source.lm
+  $ LamE "val y = 4; let val x = 1 in + y x" 
+    \z.((z (\f x.(f (f (f (f (f x))))))) (\f x.x))
 ```
-or
+
+The options `--bnf` and `--hnf` attempt to reduce the result to beta-normal form and head-normal form, respectively. Note that if the result has no normal form, reduction will never terminate.
 ```
-  $ stack exec LamE source.lm
+$ LamE "let rec x = 1 in x" --bnf
+  (\f.((\x.(f (x x))) (\x.(f (x x))))) \x z.((z (\f x.(f x))) (\f x.x))
+  \a.((a (\b c.(b c))) (\b c.c))
 ```
-The executable `LamE` takes one LamE source file as an argument and prints the result to standard output.
+
+The options `--int, --bool, --char, --string` attempt to decode the result. If the result is not of the appropriate type termination is not guaranteed.
 
 ```
-  $ echo "(val y = 4; let val x = 1 in + y x)" > source.lm
-  $ LamE source.lm
-   \z.(z(\fx.f(f(f(f(fx))))))(\fx.f)
+  $ LamE "val y = 4; let val x = 1 in + y x" --int
+    \z.((z (\f x.(f (f (f (f (f x))))))) (\f x.x))
+    5
 ```
+
+The options `-i FILE` and `-o FILE` allow reading from and writing to files.
 
 # Why?
 Curiosity, mainly. We know the untyped lambda calculus is Turing complete, so (loosely speaking), any program and datatype can be encoded as a lambda term. 
