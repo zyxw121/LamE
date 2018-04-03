@@ -3,8 +3,6 @@ import Core
 import Env
 import Data.List (intercalate)
 
-type Ident = String
-
 data Expr  = VarExp Name
             | TermExp Term
             | CharExp Char
