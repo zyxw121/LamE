@@ -53,7 +53,7 @@ applyPrim (ChEqual) [CharAct n, CharAct m] = BoolAct (n==m)
 applyPrim (Head) [ListAct xs] = (head xs) 
 applyPrim (Tail) [ListAct xs] = ListAct (tail xs) 
 applyPrim (Cons) [x, ListAct xs] = ListAct (x:xs) 
-applyPrim (Empty) [ListAct xs] = BoolAct (xs==[]) 
+applyPrim (Empty) [ListAct xs] = BoolAct (null xs) 
 applyPrim (StrEqual) [StringAct n, StringAct m] = BoolAct (n==m)
 applyPrim (VAR) [StringAct n] = TermAct (Var (Name n)) 
 applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t) 
@@ -63,6 +63,9 @@ applyPrim p xs = Application (Primitive p) xs
 elab :: Defn -> Env -> Env
 elab (Val x e) env = define env x (act e env)
 elab (Rec x e) env = define env x (DefRec x e env)
+
+elab1 :: Defn -> Environment Action -> Environment Action
+elab1 d env = current_env $ elab d (envFrom env)
 
 elabM :: Monad m => Defn -> EnvT Action m ()
 elabM (Val x e) = envM >>= \env -> defineM x (act e env)
@@ -74,6 +77,9 @@ eval e = envM >>= \env -> return $ act e env
 -- this elaborates the environment sequentially
 act' :: Program -> Env -> Action
 act' (Program ds e) env = act e (foldr elab env (reverse ds))
+
+fromProg :: Program -> Env
+fromProg (Program ds e) = (foldr elab new_env (reverse ds))
 
 partial :: Action -> Partial Combinator 
 partial (TermAct t) = Hole (CTerm t)
@@ -131,7 +137,6 @@ instance Church Combinator where
     (CTerm t) -> church t
     (Y) -> y
  
-prims :: Env
 prims = map (\(n,p) -> (Name n, Primitive p)) 
   [ ("+", Plus)
   , ("-", Minus)
@@ -159,4 +164,10 @@ prims = map (\(n,p) -> (Name n, Primitive p))
 consts = map (\(n,a) -> (Name n, a)) 
   [("nil", ListAct []) ]
 
-prim = prims ++ consts
+prim' = Module 
+  { module_name = "Base"
+  , module_env = prims ++ consts
+  , module_reload = return . Just $ prims++consts
+  }
+
+prim = addEnv new_env prim'

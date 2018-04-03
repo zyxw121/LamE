@@ -3,7 +3,7 @@ module Parser where
 import Syntax
 import Core
 import Data.Char
-import Text.ParserCombinators.Parsec hiding (string, spaces) 
+import Text.ParserCombinators.Parsec hiding (spaces) 
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
@@ -141,12 +141,12 @@ pList =  enclosed '[' ']' $ do
   xs <- eat $ sepEndBy pExpr comma <|> sepBy pExpr comma
   return $ ListExp xs
 
-string :: Parser String
-string = enclosed '\"' '\"' $
+string' :: Parser String
+string' = enclosed '\"' '\"' $
   many $ pEscape <|> noneOf "\"\\"
 
 pString :: Parser Expr
-pString = string >>= return . StringExp 
+pString = string' >>= return . StringExp 
 
 pVar :: Parser Expr
 pVar = identifier >>= return . VarExp 
@@ -223,12 +223,23 @@ pProgram = do
   return $ Program defs e
 
 pCommand :: Parser Command
-pCommand = try (pDefn >>= return . Define) <|> (pExpr >>= return . Evaluate) 
+pCommand = try (pDefn >>= return . Define) 
+        <|> (pExpr >>= return . Evaluate) 
+        <|> (char ':' >> pStringCommand)
+
+pStringCommand :: Parser Command
+pStringCommand = ((string "q" <|> string "quit") >> return Quit)
+              <|> (string "r" >> return Reset)
+              <|> (string "l" >> spaces1 >> many anyChar >>= return . Load)
 
 -- Parsing strings
-
 parseCom :: String -> Either String Command
 parseCom s = case parse pCommand "" s of
+  Left e -> Left $ show e
+  Right r -> Right r
+
+parseProg :: String -> Either String Program
+parseProg s = case parse pProgram "" s of
   Left e -> Left $ show e
   Right r -> Right r
 
@@ -236,7 +247,6 @@ parseExpr :: String -> Expr
 parseExpr s = case parse (pExpr <* eof) "" s of
   Left e -> error $ show e
   Right r -> r
-
 
 parseStrP :: String -> Program
 parseStrP s = case parse pProgram "" s of

@@ -15,15 +15,13 @@ data Expr  = VarExp Name
             | Func [Name] Expr
             | Apply Expr [Expr]
             | Let Defn Expr 
-            deriving (Eq)
 
 data Defn  = Val Name Expr 
             | Rec Name Expr
-            deriving (Eq) 
          
-data Program  = Program [Defn] Expr deriving (Eq)
+data Program  = Program [Defn] Expr 
 
-type Env = Environment Action
+type Env = Environments Action
 
 data Action = Param Name
             | TermAct Term 
@@ -36,7 +34,6 @@ data Action = Param Name
             | DefRec Name Expr Env 
             | Application Action [Action] 
             | Primitive Prim 
-            deriving (Eq)
 
 data Prim = Plus | Minus | Times | Div | Mod 
           | And | Or | Not 
@@ -45,7 +42,7 @@ data Prim = Plus | Minus | Times | Div | Mod
           | Head | Tail | Cons | Empty
           | StrEqual
           | VAR | APP | ABS
-          deriving (Show, Eq) 
+          deriving (Show) 
 
 data Combinator = CPrim Prim 
                 | CInt Int 
@@ -61,7 +58,12 @@ data Partial a = PVar Name
                 | PApp (Partial a) (Partial a) 
                 | Hole a 
 
-data Command = Define Defn | Evaluate Expr deriving (Show)
+data Command = Define Defn 
+             | Evaluate Expr 
+             | Reset 
+             | Quit
+             | Load String
+             | Final (Term -> String)
 -- Pretty printing
 
 pvars :: Partial a -> [Name]
@@ -122,7 +124,7 @@ instance Show Action where
     (StringAct s) ->"\"" ++ s ++ "\""
     (BoolAct b) -> show b
     (NumAct n) -> show n
-    (Closure ns e env) -> "Closure " ++ show ns ++ " " ++ addParens 1 (show e) ++ addParens 1 (show env)
-    (DefRec n e env) -> "Recursive " ++ show n ++ " " ++ addParens 1 (show e) ++ addParens 1 (show env)
+    (Closure ns e env) -> "Closure " ++ show ns ++ " " ++ addParens 1 (show e) -- ++ addParens 1 (show env)
+    (DefRec n e env) -> "Recursive " ++ show n ++ " " ++ addParens 1 (show e) -- ++ addParens 1 (show env)
     (Application a as) -> "Application" ++ "[" ++ show a ++ ", " ++   intercalate ", " (map show as) ++ "]" 
     (Primitive p) -> show p

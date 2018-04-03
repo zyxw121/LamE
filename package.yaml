@@ -20,6 +20,8 @@ description:         Please see the README on Github at <https://github.com/zyxw
 dependencies:
 - base >= 4.7 && < 5
 - transformers
+- containers
+- filepath
 
 library:
   source-dirs: src
