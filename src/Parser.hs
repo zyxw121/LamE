@@ -3,7 +3,7 @@ module Parser where
 import Syntax
 import Core
 import Data.Char
-import Text.ParserCombinators.Parsec hiding (string) 
+import Text.ParserCombinators.Parsec hiding (string, spaces) 
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import qualified Text.ParserCombinators.Parsec.Token as Token
@@ -12,11 +12,11 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 alloweds = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+*/<>=%"
 reserveds = words "true false if then else let val rec func in = match as"
 
---Helper funcs
+--Helper functions
 semi :: Parser ()
 semi = do
   char ';'
-  skipMany white
+  skipMany spaces1
 
 zeroNumber :: Parser Int
 zeroNumber  = do
@@ -35,14 +35,19 @@ integer = do
   return $ f n 
 
 parens :: Parser a -> Parser a
-parens p = do
-  char '('
+parens = enclosed '(' ')'
+
+enclosed :: Char -> Char -> Parser a -> Parser a
+enclosed l r p = do
+  char l
   x <- p
-  char ')'
+  char r
   return x
 
-white :: Parser ()
-white = skipMany1 space
+spaces :: Parser ()
+spaces = skipMany space
+spaces1 :: Parser ()
+spaces1 = skipMany1 space
 
 ident :: Parser String
 ident = do
@@ -50,16 +55,19 @@ ident = do
   xs <- many $ oneOf alloweds 
   return (x:xs)
 
-identifier' :: Parser Name
-identifier' = do
-  x <- identifier
-  skipMany space
-  return x
-
 identifier :: Parser Name
 identifier = try $ do
   name <- ident
   if name `elem` reserveds then unexpected ("reserved word") else return . Name $ name
+
+identifier' :: Parser Name
+identifier' = eat identifier 
+
+eat :: Parser a -> Parser a
+eat p = do
+  x <- p
+  spaces
+  return x
 
 reserved :: String -> Parser ()
 reserved s = reserved' s >> skipMany space
@@ -82,7 +90,7 @@ caseString name = do{ walk name; return name }
 pExpr :: Parser Expr
 pExpr = do
   skipMany space
-  xs <- sepEndBy1 pExpr' white
+  xs <- sepEndBy1 pExpr' spaces1
   case xs of
     [] -> unexpected "empty"
     [x] -> return x
@@ -128,23 +136,17 @@ comma = do
   skipMany space
 
 pList :: Parser Expr
-pList = do
-  char '['
+pList =  enclosed '[' ']' $ do
   skipMany space
-  xs <- sepEndBy pExpr comma <|> sepBy pExpr comma
-  skipMany space
-  char ']'
+  xs <- eat $ sepEndBy pExpr comma <|> sepBy pExpr comma
   return $ ListExp xs
 
 string :: Parser String
-string = do
-  char '\"'
-  xs <- many $ pEscape <|> noneOf "\"\\"
-  char '\"'
-  return xs
+string = enclosed '\"' '\"' $
+  many $ pEscape <|> noneOf "\"\\"
 
 pString :: Parser Expr
-pString = string >>= return .  StringExp 
+pString = string >>= return . StringExp 
 
 pVar :: Parser Expr
 pVar = identifier >>= return . VarExp 
@@ -160,52 +162,30 @@ pIf = do
   y <- pExpr
   return $ If c x y
 
--- ewww
 pMatch :: Parser Expr
 pMatch = do
   reserved "match"
   x <- pExpr
   reserved "as"
-  char '('
-  skipMany space
-  reserved "Var"
-  x1 <- identifier'
-  char ')'
-  skipMany space
-  e1 <- parens pExpr
-  skipMany space
-  char '('
-  reserved "App"
-  s2 <- identifier'
-  t2 <- identifier'
-  char ')'
-  skipMany space
-  e2 <- parens pExpr
-  skipMany space
-  char '('
-  reserved "Abs"
-  x3 <- identifier'
-  s3 <- identifier'
-  char ')'
-  skipMany space
+  x1 <- eat $ parens $ spaces >> reserved "Var" >> identifier'
+  e1 <- eat $ parens pExpr
+  [s2,t2] <- eat $ parens $ reserved "App" >> many identifier'
+  e2 <- eat $ parens pExpr
+  [x3,s3] <- eat $ parens $ reserved "Abs" >> many identifier'
   e3 <- parens pExpr  
   return $ Match x (x1, e1) (s2,t2,e2) (x3,s3,e3)
 
-
 pArgs :: Parser [Name]
-pArgs = do
-  char '('
+pArgs = parens $ do 
   skipMany space
-  xs <- sepEndBy1 identifier white <|> sepBy1 identifier white
+  xs <- sepEndBy1 identifier spaces1 <|> sepBy1 identifier spaces1
   skipMany space
-  char ')'
   return xs
 
 pFunc :: Parser Expr
 pFunc = do
   reserved "func"
-  xs <- pArgs 
-  skipMany space
+  xs <- eat pArgs 
   body <- parens pExpr
   return $ Func xs body
 
