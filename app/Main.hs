@@ -34,10 +34,10 @@ options =
   , Option ['o'] ["output"] (OptArg ((\f o -> o{optOut= writeFile f }) . fromMaybe "output" )  "FILE") "output FILE" 
   , Option [] ["bnf"] (NoArg (\o -> o{optReduce= Just bnf}  ) ) "attempts to reduce result to beta-normal-form" 
   , Option [] ["hnf"] (NoArg (\o -> o{optReduce= Just hnf}  ) ) "attempts to reduce result to head-normal-form" 
-  , Option [] ["int"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Int)}  ) ) "attempts to reduce decode the result as an integer" 
-  , Option [] ["bool"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Bool)}  ) ) "attempts to reduce decode the result as a boolean" 
-  , Option [] ["char"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Char)}  ) ) "attempts to reduce decode the result as a char" 
-  , Option [] ["string"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> String)}  ) ) "attempts to reduce decode the result as a string" 
+  , Option [] ["int"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Int)}  ) ) "attempts to decode the result as an integer" 
+  , Option [] ["bool"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Bool)}  ) ) "attempts to decode the result as a boolean" 
+  , Option [] ["char"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Char)}  ) ) "attempts to decode the result as a char" 
+  , Option [] ["string"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> String)}  ) ) "attempts to decode the result as a string" 
   ]
 
 compilerOpts :: [String] -> IO (Options, [String])
