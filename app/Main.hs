@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 import System.Environment
 import Core
@@ -11,7 +12,7 @@ import System.IO
 
 
 data Options = Options 
-  { optReport :: String -> IO ()
+  { optReport ::String -> IO ()
   , optIn :: Maybe String
   , optOut :: String -> IO () 
   , optReduce :: Maybe (Term -> Term)
@@ -47,6 +48,7 @@ compilerOpts argv =
      (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
  where header = "Usage: LamE [OPTION...] INPUT"
 
+
 main :: IO ()
 main = do
   (opts, args) <- (getArgs >>= compilerOpts) 
@@ -56,16 +58,16 @@ main = do
   let prog = parseStrP source
       report = optReport opts 
       output =  optOut opts 
-  report $ show prog 
+  report $ show prog ++"\n" 
   let a = act' prog prim
-  report $ show a 
+  report $ show a ++"\n"
   let p = partial a
-  report $ show p 
+  report $ show p ++"\n"
   let r = church p
-  output $ show r
+  output $ show r++"\n"
   case optReduce opts of
     Nothing -> return ()
-    Just f -> output . show $ f r
+    Just f -> output $ show (f r) ++ "\n"
   case optDecode opts of
     Nothing -> return ()
     Just f -> output $ f r
