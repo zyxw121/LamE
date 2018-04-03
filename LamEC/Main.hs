@@ -4,7 +4,7 @@ import System.Environment
 import Core
 import Syntax
 import Parser
-import LamE
+import Eval
 import Terms
 import System.Console.GetOpt
 import Data.Maybe

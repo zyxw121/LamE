@@ -1,4 +1,4 @@
-module LamE where
+module Eval where
 import Prelude hiding (pred, succ, and, or)
 import Core
 import Syntax
