@@ -222,7 +222,16 @@ pProgram = do
   e <- pExpr <* eof
   return $ Program defs e
 
+pCommand :: Parser Command
+pCommand = try (pDefn >>= return . Define) <|> (pExpr >>= return . Evaluate) 
+
 -- Parsing strings
+
+parseCom :: String -> Either String Command
+parseCom s = case parse pCommand "" s of
+  Left e -> Left $ show e
+  Right r -> Right r
+
 parseExpr :: String -> Expr
 parseExpr s = case parse (pExpr <* eof) "" s of
   Left e -> error $ show e

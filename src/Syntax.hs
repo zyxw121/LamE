@@ -61,6 +61,7 @@ data Partial a = PVar Name
                 | PApp (Partial a) (Partial a) 
                 | Hole a 
 
+data Command = Define Defn | Evaluate Expr deriving (Show)
 -- Pretty printing
 
 pvars :: Partial a -> [Name]

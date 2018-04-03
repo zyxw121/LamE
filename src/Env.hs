@@ -16,7 +16,7 @@ instance Monad m => Applicative (EnvT v m) where
 
 instance Monad m => Monad (EnvT v m) where
   return x = EnvT (\e -> return (x,e))
-  xm >>= f = EnvT (\e ->  runEnvT xm e >>= (\(a,e') -> runEnvT (f a) e )  )  
+  xm >>= f = EnvT (\e ->  runEnvT xm e >>= (\(a,e') -> runEnvT (f a) e' )  )  
 
 instance MonadTrans (EnvT v) where
   lift xm = EnvT (\e -> xm >>= (\a -> return (a,e)))
