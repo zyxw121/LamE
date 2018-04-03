@@ -11,27 +11,33 @@ import System.IO
 
 
 data Options = Options 
-  { optVerbose :: Bool
+  { optReport :: String -> IO ()
   , optIn :: Maybe String
-  , optOut :: Maybe String
+  , optOut :: String -> IO () 
   , optReduce :: Maybe (Term -> Term)
+  , optDecode :: Maybe (Term -> String)
   }
 
 defaultOptions :: Options
 defaultOptions = Options
-  { optVerbose  = False
+  { optReport = const $ return ()
   , optIn = Nothing
-  , optOut = Nothing
+  , optOut = putStrLn 
   , optReduce = Nothing
+  , optDecode = Nothing
   }
 
 options :: [OptDescr (Options -> Options)]
 options = 
-  [ Option ['v'] ["verbose"] (NoArg (\o -> o{optVerbose=True})) "print intermediate parse trees to stderr"
+  [ Option ['v'] ["verbose"] (NoArg (\o -> o{optReport=hPutStrLn stderr })) "print intermediate parse trees to stderr"
   , Option ['i'] ["input"] (ReqArg ((\f o -> o{optIn=Just f}) ) "FILE") "input FILE" 
-  , Option ['o'] ["output"] (OptArg (\f o -> o{optOut= f}  ) "FILE") "output FILE" 
+  , Option ['o'] ["output"] (OptArg ((\f o -> o{optOut= writeFile f }) . fromMaybe "output" )  "FILE") "output FILE" 
   , Option [] ["bnf"] (NoArg (\o -> o{optReduce= Just bnf}  ) ) "attempts to reduce result to beta-normal-form" 
   , Option [] ["hnf"] (NoArg (\o -> o{optReduce= Just hnf}  ) ) "attempts to reduce result to head-normal-form" 
+  , Option [] ["int"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Int)}  ) ) "attempts to reduce decode the result as an integer" 
+  , Option [] ["bool"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Bool)}  ) ) "attempts to reduce decode the result as a boolean" 
+  , Option [] ["char"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> Char)}  ) ) "attempts to reduce decode the result as a char" 
+  , Option [] ["string"] (NoArg (\o -> o{optDecode= Just $ show . (unchurch :: Term -> String)}  ) ) "attempts to reduce decode the result as a string" 
   ]
 
 compilerOpts :: [String] -> IO (Options, [String])
@@ -48,17 +54,18 @@ main = do
     Just path -> readFile path
     Nothing -> return . head $ args
   let prog = parseStrP source
-      report = if optVerbose opts then hPutStr stderr else const (return ())
-      output = case optOut opts of
-        Just out -> writeFile out . show
-        Nothing -> print 
-  report $ show prog ++ "\n"
+      report = optReport opts 
+      output =  optOut opts 
+  report $ show prog 
   let a = act' prog prim
-  report $ show a ++ "\n"
+  report $ show a 
   let p = partial a
-  report $ show p ++ "\n"
+  report $ show p 
   let r = church p
-  output r
+  output $ show r
   case optReduce opts of
+    Nothing -> return ()
+    Just f -> output . show $ f r
+  case optDecode opts of
     Nothing -> return ()
     Just f -> output $ f r
