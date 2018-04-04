@@ -67,10 +67,10 @@ Mostly Lisp-ish with a bit of Haskell
 
 [See here](SYNTAX.md) for a detailed explanation of the syntax.
 
-# Coming Soon
+# Future extensions
+I'm quite happy with the current state of the project, but some things that might be added in the future are:
 * Better test coverage
 * Better documentation
 * Better error messages
 * Infix arithmetic
-* A REPL
 * Some kind of type system?

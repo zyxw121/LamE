@@ -40,4 +40,4 @@ prompt' text = do
     hFlush stdout
     getLine 
 
-main = putStrLn "LamER, version 1.1.0" >> runEnvT (loopM rep) prim
+main = putStrLn "LamER, version 1.1.2" >> runEnvT (loopM rep) prim
