@@ -43,8 +43,8 @@ data Prim = Plus | Minus | Times | Div | Mod
           | And | Or | Not 
           | Equal | Lesser | Leq | Geq | Greater
           | ChEqual
-          | Head | Tail | Cons | Empty
-          | StrEqual
+          | Head | Tail | Cons | Empty | Nil
+          | StrEqual | CharAppend
           | VAR | APP | ABS
           deriving (Eq, Show) 
 
@@ -118,10 +118,10 @@ instance Show Expr where
     (BoolExp b) -> show b
     (NumExp n) -> show n
     (If e1 e2 e3) -> "If " ++ addParens 1 (show e1) ++ addParens 1 (show e2) ++ addParens 1 (show e3) 
-    (Match e (x,e1) (s,t,e2) (y,u,e3)) -> undefined
+    (Match e (x,e1) (s,t,e2) (y,u,e3)) -> "match" 
     (Func ns e) -> "Func " ++ "[" ++ intercalate ", " (map show ns) ++ "]" ++ addParens 1 (show e)
     (Apply e es) -> "Apply" ++ "[" ++ show e ++ ", " ++   intercalate ", " (map show es) ++ "]" 
-    (Let d e) -> "Let " ++ show d ++" in " ++ show e
+    (Let d e) -> "Let " ++ show d ++" in " ++ show e 
 instance Show Action where
   show a = case a of
     (Param n) -> "Var " ++ show n 

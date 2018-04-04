@@ -55,6 +55,7 @@ applyPrim (Tail) [ListAct xs] = ListAct (tail xs)
 applyPrim (Cons) [x, ListAct xs] = ListAct (x:xs) 
 applyPrim (Empty) [ListAct xs] = BoolAct (null xs) 
 applyPrim (StrEqual) [StringAct n, StringAct m] = BoolAct (n==m)
+applyPrim (CharAppend) [CharAct n, StringAct m] = StringAct (n:m) 
 applyPrim (VAR) [StringAct n] = TermAct (Var (Name n)) 
 applyPrim (APP) [TermAct s, TermAct t] = TermAct (App s t) 
 applyPrim (ABS) [StringAct n, TermAct s] = TermAct (Abs (Name n) s) 
@@ -114,7 +115,9 @@ instance Church Prim where
     Tail -> tailT
     Cons -> cons
     Empty -> emptyList
+    Nil -> nil
     StrEqual -> equalString
+    CharAppend -> charAppend
     VAR -> varT
     APP -> appT
     ABS -> absT   
@@ -132,7 +135,7 @@ instance Church Combinator where
     (CInt n) -> church n 
     (CBool b) -> church b
     (CChar c) -> church c
-    (CList xs) -> church $ map church xs
+    (CList xs) -> church xs
     (CString s) -> church s
     (CTerm t) -> church t
     (Y) -> y
@@ -156,18 +159,18 @@ prims = map (\(n,p) -> (Name n, Primitive p))
   , ("tail", Tail)
   , ("cons", Cons)
   , ("empty", Empty)
+  , ("nil", Nil)
   , ("=s", StrEqual) 
+  , ("+c", CharAppend) 
   , ("Var", VAR) 
   , ("App", APP) 
   , ("Abs", ABS) ]
 
-consts = map (\(n,a) -> (Name n, a)) 
-  [("nil", ListAct []) ]
 
 prim' = Module 
   { module_name = "Base"
-  , module_env = prims ++ consts
-  , module_reload = return . Just $ prims++consts
+  , module_env = prims 
+  , module_reload = return . Just $ prims
   }
 
 prim = addEnv new_env prim'

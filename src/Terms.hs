@@ -115,6 +115,9 @@ fst = abs "p" (App (v "p")(true))
 snd = abs "p" (App (v "p")(false))
 _fst = App fst 
 _snd = App snd  
+-- _fst $ pair (x,y) == x
+-- _snd $ pair (x,y) = y
+
 
 unPair :: Term -> (Term, Term)
 unPair s = (fromDB . bnf' . toDB . _fst $ s, fromDB . bnf' . toDB . _snd $s )
@@ -228,12 +231,12 @@ equalString = App y (abss "exy" ( app2 (_emptyList (v"x"))
 
 _equalString = app2 equalString
 
-
+charAppend = cons
 -- Terms
 
 instance Church Term where
   church = churchTerm
-  unchurch = undefined
+  --unchurch = undefined
 
 
 churchTerm (Var (Name n)) = abss "abc" $ App (v"a") (church n)

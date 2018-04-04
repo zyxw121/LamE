@@ -1,0 +1,99 @@
+rec append = func (x y) 
+  (if empty x 
+  then y 
+  else cons (head x) (append (tail x) y) );
+
+rec filter = func (p xs) (
+  if empty xs
+  then xs
+  else (if p (head xs) then cons (head xs) (filter p (tail xs)) else filter p (tail xs)));
+
+rec map = func (f xs) (
+  if empty xs 
+  then xs
+  else cons (f (head xs)) (map f (tail xs)) );
+
+rec concat = func (xss) (
+  if empty xss 
+  then xss
+  else append (head xss) (concat (tail xss)));
+
+rec length = func (xs) (if empty xs then 0 else + 1 (length (tail xs)));
+
+val notStr = func (x) (func (y) (not (=s x y)));
+
+rec frees = func (t) (match t as
+  (Var n) ([n])
+  (App u v) (append (frees u) (frees v))
+  (Abs n v) ( filter (notStr n) (frees v) )); 
+
+val names = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"];
+val chars = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'];
+
+rec gen = func (n) (
+if == n 0 then ["a"]
+else (if == n 1 then
+names
+else
+let val ns = gen (- n 1) in (
+let val f = func (s) (let val g = func (t) (+s s t) in concat (map g names)) in (concat (map f chars) ))
+));
+
+rec takeWhile = func (p xs) (if empty xs then xs else if p (head xs) then cons (head x) (takeWhile p (tail x)) else (takeWhile p (tail x))  );
+
+rec iterate = func (f x) (cons x (iterate f (f x)));
+
+rec take = func (n xs) (if == 0 n then nil else cons (head x) (take (- n 1) (tail xs)));
+
+val times = func (n) (func (m) (* n m));
+val leq = func (n) (func (m) (<= m m));
+
+rec elemStr = func (x xs) (if empty xs then false else
+if =s x (head xs) then true else elemStr x (tail xs)
+);
+
+val fresh = func (ns) (
+let val n = length ns in (
+let val k = length (takeWhile (leq n) (iterate (times 26) 1)) in (
+let val ps = take (+ 1 n) (gen k) in (
+head (filter (func (x) (not (elemStr x ns) )) ps)))));
+
+rec sub = func (s t x) (match s as
+  (Var a) (if =s x a then t else s)
+  (App a b) (App (sub a t x) (sub b t x))
+  (Abs a b) (let val ts = frees t in (
+    if or (=s x a) (elemStr a ts) 
+    then let val z = fresh (concat [ts, frees b, [a]]) in (Abs z (sub (sub s (Var z) y) t x ) )
+    else Abs a (sub t x b))));
+val x =  (Var "x");
+
+val bred = func (t) (match t as 
+  (Var x) (nil)
+  (App p q) (match p as
+    (Var x) (nil)
+    (App a b) (nil)
+    (Abs x s) ([sub s q x]))
+  (Abs x s) (nil));
+
+val appl = func (xs r) (
+if empty xs then nil else [App (head xs) r]);
+
+val appr = func (l xs) (
+if empty xs then nil else [App l (head xs)]);
+
+val abs = func (x xs) (if empty xs then nil else Abs x (head xs));
+
+rec lred = func (t) (match t as
+  (Var x) (nil)
+  (App p q) (
+    if empty (bred (App p q)) then (if empty (lred p) then (if empty (lred q) then nil  else App p (head (lred q)))  else App (head (lred p)) q ) else head (bred (App p q))  )
+  (Abs x s) (if empty (lred s) then nil else Abs x (head (lred x))  ));
+
+rec bnf = func (s) ( let val xs = lred s in (if empty xs then s else bnf (head xs))
+);
+
+val f = func (n) (+ 1 n);
+val i = Abs "x" (Var "x");
+val x = Var "x";
+val y = App i i;
+bnf

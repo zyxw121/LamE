@@ -25,7 +25,7 @@ fresh' ns =
   let n = length ns
       k = length $ takeWhile (<=n) $ iterate (*26) 1 
       ps = take (n+1) $ gen k  in 
-        head [q | q<- ps, not $ q `elem` ns] 
+        head $ filter (not . (flip elem) ns) ps 
 
 -- It seems like returning a Set, or at least an ordered list (and merging in
 -- the App case) would be more quicker, but it's actually noticably slower than
