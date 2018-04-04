@@ -37,9 +37,9 @@ library:
   - parsec 
 
 executables:
-  LamEC:
+  LamE:
     main:                Main.hs
-    source-dirs:         LamEC
+    source-dirs:         LamE
     ghc-options:
     - -threaded
     - -rtsopts

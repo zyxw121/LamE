@@ -35,7 +35,15 @@ The options `--int, --bool, --char, --string` attempt to decode the result. If t
 ```
 
 The options `-i FILE` and `-o FILE` allow reading from and writing to files.
+# REPL
+Alternatively, you can use the LamE REPL. Launch this with `LamER`. It's similar to GHCi.
 
+You can enter definitions to be added to the local environment, or expressions to be evaluated.
+
+The REPL supports loading files with the command `:l FILE`. Refresh loaded modules with `:r`. Quit with `:q`.
+
+Finally, you can prefix an expression with a command indicating what to do with the result. The possibilities are `:bnf` and `:hnf` to reduce the result, or `:int`, `:bool`, `:char`, `:string` to interpret the result as the appropriate type. Beware of non-termination!
+ 
 # Why?
 Curiosity, mainly. We know the untyped lambda calculus is Turing complete, so (loosely speaking), any program and datatype can be encoded as a lambda term. 
 
