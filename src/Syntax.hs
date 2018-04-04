@@ -14,12 +14,15 @@ data Expr  = VarExp Name
             | Match Expr (Name, Expr) (Name, Name, Expr) (Name, Name, Expr)
             | Func [Name] Expr
             | Apply Expr [Expr]
-            | Let Defn Expr 
+            | Let Defn Expr
+            deriving (Eq) 
 
 data Defn  = Val Name Expr 
             | Rec Name Expr
+            deriving (Eq) 
          
 data Program  = Program [Defn] Expr 
+            deriving (Eq) 
 
 type Env = Environments Action
 
@@ -34,6 +37,7 @@ data Action = Param Name
             | DefRec Name Expr Env 
             | Application Action [Action] 
             | Primitive Prim 
+            deriving (Eq) 
 
 data Prim = Plus | Minus | Times | Div | Mod 
           | And | Or | Not 
@@ -42,7 +46,7 @@ data Prim = Plus | Minus | Times | Div | Mod
           | Head | Tail | Cons | Empty
           | StrEqual
           | VAR | APP | ABS
-          deriving (Show) 
+          deriving (Eq, Show) 
 
 data Combinator = CPrim Prim 
                 | CInt Int 
@@ -57,6 +61,7 @@ data Partial a = PVar Name
                 | PAbs Name (Partial a) 
                 | PApp (Partial a) (Partial a) 
                 | Hole a 
+                deriving (Eq) 
 
 data Command = Define Defn 
              | Evaluate Expr Process 

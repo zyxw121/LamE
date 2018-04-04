@@ -6,6 +6,7 @@ import Syntax
 import Parser
 import Eval
 import Terms
+import Util
 import System.Console.GetOpt
 import Data.Maybe
 import System.IO
@@ -47,7 +48,6 @@ compilerOpts argv =
      (o,n,[]  ) -> return (foldl (flip id) defaultOptions o, n)
      (_,_,errs) -> ioError (userError (concat errs ++ usageInfo header options))
  where header = "Usage: LamE [OPTION...] INPUT"
-
 
 main :: IO ()
 main = do

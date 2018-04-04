@@ -5,6 +5,7 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import qualified Data.Map.Strict as Map
 import Control.Applicative
+import Control.Monad.IO.Class
 
 type Environment a = [(Name,a)] -- Mapping names to as
 
@@ -14,42 +15,14 @@ data Module a = Module
   , module_reload :: IO (Maybe (Environment a))
   }
 
-reload :: Module a -> IO (Maybe (Module a))
-reload m = module_reload m >>= \case 
-  Just env -> return . Just $ m{module_env=env}
-  Nothing -> return Nothing
-
-new_env_ :: Environment a
-new_env_ = []
+instance Eq a => Eq (Module a) where
+  n==m = (module_name n == module_name m) && (module_env n == module_env m)
 
 data Environments a = Environments 
   { current_env :: Environment a
   , loaded_modules ::  Map.Map String (Module a)
   }
-
-new_env :: Environments a
-new_env = Environments
-  { current_env = new_env_
-  , loaded_modules = Map.empty
-  }
-
-envFrom :: Environment a -> Environments a
-envFrom env = new_env {current_env=env}
-
-addEnv :: Environments a -> Module a -> Environments a
-addEnv envs m= envs{loaded_modules = Map.insert (module_name m) m (loaded_modules envs)}
-
-addM :: Monad m => Module a -> EnvT a m ()
-addM m = EnvT (\e -> return ((), addEnv e m))
-
-reset :: Environments a -> IO (Environments a)
-reset envs = do
-  ms <- sequence $ Map.map reload (loaded_modules envs) 
-  return $ new_env {loaded_modules = Map.foldr f (Map.empty) ms, current_env = new_env_} 
-  where
-  f x ys = case x of
-    Nothing -> ys
-    Just y -> Map.insert (module_name y) y ys
+  deriving Eq
 
 newtype EnvT v m a = EnvT {runEnvT :: Environments v -> m (a, Environments v) }
 
@@ -66,6 +39,41 @@ instance Monad m => Monad (EnvT v m) where
 
 instance MonadTrans (EnvT v) where
   lift xm = EnvT (\e -> xm >>= (\a -> return (a,e)))
+
+instance MonadIO m => MonadIO (EnvT v m) where
+  liftIO = lift . liftIO
+
+reload :: Module a -> IO (Maybe (Module a))
+reload m = module_reload m >>= \case 
+  Just env -> return . Just $ m{module_env=env}
+  Nothing -> return Nothing
+
+new_env_ :: Environment a
+new_env_ = []
+
+new_env :: Environments a
+new_env = Environments
+  { current_env = new_env_
+  , loaded_modules = Map.empty
+  }
+
+envFrom :: Environment a -> Environments a
+envFrom env = new_env {current_env=env}
+
+addEnv :: Environments a -> Module a -> Environments a
+addEnv envs m= envs{loaded_modules = Map.insert (module_name m) m (loaded_modules envs)}
+
+addM :: Monad m => Module a -> EnvT a m ()
+addM m = EnvT (\e -> return ((), addEnv e m))
+
+reset :: MonadIO m => Environments a -> m (Environments a)
+reset envs = do
+  ms <- liftIO . sequence $ Map.map reload (loaded_modules envs) 
+  return $ new_env {loaded_modules = Map.foldr f (Map.empty) ms, current_env = new_env_} 
+  where
+  f x ys = case x of
+    Nothing -> ys
+    Just y -> Map.insert (module_name y) y ys
 
 findM :: Monad m => Name -> EnvT v m (Maybe v)
 findM n = EnvT (\e -> return (find e n, e))
