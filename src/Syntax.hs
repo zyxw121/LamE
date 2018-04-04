@@ -59,11 +59,13 @@ data Partial a = PVar Name
                 | Hole a 
 
 data Command = Define Defn 
-             | Evaluate Expr 
+             | Evaluate Expr Process 
              | Reset 
              | Quit
              | Load String
-             | Final (Term -> String)
+             | Bad String String
+data Process = Bnf | Hnf | ToInt | ToBool | ToChar | ToString | None 
+
 -- Pretty printing
 
 pvars :: Partial a -> [Name]

@@ -14,17 +14,25 @@ import Data.List
 
 -- IO () with access to an Env
 rep :: EnvT Action IO ()
-rep =  prompt  >>= (\case 
-  Left e -> lift $ putStrLn e
-  Right v -> execute v) . parseCom
+rep =  prompt  >>= execute . parseCom
+
+process :: Process -> Term -> String
+process Bnf = show . bnf
+process Hnf = show . hnf
+process ToInt = show . (unchurch :: Term -> Int)
+process ToBool = show . (unchurch :: Term -> Bool)
+process ToChar = show . (unchurch :: Term -> Char)
+process ToString = show . (unchurch :: Term -> String)
+process None = show
 
 execute :: Command -> EnvT Action IO ()
 execute = \case 
   Define d -> elabM d
-  Evaluate e -> eval e >>= (\a -> lift . print . church . partial $ a)
+  Evaluate e p -> eval e >>= (\a -> lift . putStrLn . (process p). church . partial $ a)
   Quit -> lift $ putStrLn "Quiting LamER" >> exitSuccess
   Reset -> envM >>= lift . reset >>= inM
   Load path -> loadFile path
+  Bad e c -> lift $ putStrLn e
 
 loadFile :: String -> EnvT Action IO ()
 loadFile path = do
@@ -57,4 +65,4 @@ prompt' text = do
     hFlush stdout
     getLine 
 
-main = putStrLn "LamER, version 1.0.1" >> runEnvT (loopM rep) prim
+main = putStrLn "LamER, version 1.1.0" >> runEnvT (loopM rep) prim

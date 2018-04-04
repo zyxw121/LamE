@@ -224,19 +224,38 @@ pProgram = do
 
 pCommand :: Parser Command
 pCommand = try (pDefn >>= return . Define) 
-        <|> (pExpr >>= return . Evaluate) 
+        <|> try pEval 
         <|> (char ':' >> pStringCommand)
+
+pEval :: Parser Command
+pEval = do
+  p <- pMode
+  case p of
+    None -> spaces
+    _ -> spaces1
+  e <- pExpr
+  return $ Evaluate e p 
+
+pMode :: Parser Process 
+pMode = try (char ':' >> ((string "bnf" >> return Bnf ) 
+      <|> (string "hnf" >> return Hnf)
+      <|> (string "int" >> return ToInt)
+      <|> (string "bool" >> return ToBool)
+      <|> (string "char" >> return ToChar)
+      <|> (string "string" >> return ToString))) 
+      <|> return None
 
 pStringCommand :: Parser Command
 pStringCommand = ((string "q" <|> string "quit") >> return Quit)
               <|> (string "r" >> return Reset)
               <|> (string "l" >> spaces1 >> many anyChar >>= return . Load)
+          
 
 -- Parsing strings
-parseCom :: String -> Either String Command
+parseCom :: String -> Command 
 parseCom s = case parse pCommand "" s of
-  Left e -> Left $ show e
-  Right r -> Right r
+  Left e -> Bad (show e) s 
+  Right r -> r
 
 parseProg :: String -> Either String Program
 parseProg s = case parse pProgram "" s of
